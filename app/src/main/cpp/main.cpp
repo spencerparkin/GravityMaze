@@ -97,4 +97,5 @@ void android_main(struct android_app *pApp) {
         }
     } while (!pApp->destroyRequested);
 }
-}
+
+}   // extern "C" {
