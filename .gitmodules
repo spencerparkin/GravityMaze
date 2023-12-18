@@ -1,0 +1,3 @@
+[submodule "app/src/main/cpp/PlanarPhysics"]
+	path = app/src/main/cpp/PlanarPhysics
+	url = https://github.com/spencerparkin/PlanarPhysics
