@@ -133,6 +133,9 @@ bool Game::Shutdown()
         this->display = EGL_NO_DISPLAY;
     }
 
+    this->maze.Clear();
+    this->physicsEngine.Clear();
+
     this->initialized = false;
     return true;
 }

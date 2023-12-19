@@ -175,6 +175,8 @@ Maze::Node* Maze::RandomNode(std::list<Node*>& nodeList, bool remove)
 
 void Maze::PopulatePhysicsWorld(PlanarPhysics::Engine* engine) const
 {
+    engine->Clear();
+
     PlanarPhysics::BoundingBox worldBox;
     worldBox.min = Vector2D(-this->cellWidthCM / 2.0, -this->cellHeightCM / 2.0);
     worldBox.max = Vector2D(this->widthCM + this->cellWidthCM / 2.0, this->heightCM + this->cellHeightCM / 2.0);
