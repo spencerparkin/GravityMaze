@@ -3,6 +3,7 @@
 #include <EGL/egl.h>
 #include <memory>
 #include "Engine.h"
+#include "Maze.h"
 
 struct android_app;
 
@@ -16,6 +17,7 @@ public:
     bool Shutdown();
     void HandleInput();
     void Render();
+    void GenerateNextMaze();
 
 private:
 
@@ -27,4 +29,5 @@ private:
     EGLint surfaceWidth;
     EGLint surfaceHeight;
     PlanarPhysics::Engine physicsEngine;
+    Maze maze;
 };

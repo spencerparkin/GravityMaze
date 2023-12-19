@@ -21,6 +21,8 @@ void HandleCommand(android_app* app, int32_t cmd)
                 // TODO: Handle error here somehow?
             }
 
+            game->GenerateNextMaze();
+
             app->userData = game;
             break;
         }

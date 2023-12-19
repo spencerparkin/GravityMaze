@@ -97,9 +97,10 @@ bool Game::Init()
         return false;
     }
 
-    // This gets updated on our initial render.
-    this->surfaceWidth = 0;
-    this->surfaceHeight = 0;
+    eglQuerySurface(this->display, this->surface, EGL_WIDTH, &this->surfaceWidth);
+    eglQuerySurface(this->display, this->surface, EGL_HEIGHT, &this->surfaceHeight);
+
+    glViewport(0, 0, this->surfaceWidth, this->surfaceHeight);
 
     glClearColor(1.0f, 0.0f, 0.0f, 0.0f);
 
@@ -133,11 +134,26 @@ bool Game::Shutdown()
     return true;
 }
 
+void Game::GenerateNextMaze()
+{
+    this->maze.Clear();
+
+    double CMPerPixel = 0.0264583333;   // TODO: Get this by querying the device?
+    double widthCM = CMPerPixel * double(this->surfaceWidth);
+    double heightCM = CMPerPixel * double(this->surfaceHeight);
+
+    double densityCMPerCell = 1.0;  // TODO: This is supposed to get denser as the player levels up.
+
+    this->maze.Generate(widthCM, heightCM, densityCMPerCell);
+
+    this->maze.PopulatePhysicsWorld(&this->physicsEngine);
+}
+
 void Game::Render()
 {
     EGLint currentWidth, currentHeight;
     eglQuerySurface(this->display, this->surface, EGL_WIDTH, &currentWidth);
-    eglQuerySurface(this->display, this->surface, EGL_HEIGHT, &surfaceHeight);
+    eglQuerySurface(this->display, this->surface, EGL_HEIGHT, &currentHeight);
 
     if(this->surfaceWidth != currentWidth || this->surfaceHeight != currentHeight)
     {
@@ -147,6 +163,10 @@ void Game::Render()
         glViewport(0, 0, this->surfaceWidth, this->surfaceHeight);
 
         // TODO: Update orthographic projection too.
+        //       Note that for this app, our render should not change when the orientation
+        //       of the device changes (e.g., portrait to landscape, they are the same.)
+        //       So here we may need to add a 90-degree rotation to our local-to-world transform.
+        //       I'm not sure!
     }
 
     glClear(GL_COLOR_BUFFER_BIT);
