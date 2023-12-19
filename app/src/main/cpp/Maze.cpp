@@ -1,7 +1,13 @@
 #include "Maze.h"
+#include "MazeObjects/MazeWall.h"
+#include "MazeObjects/MazeBall.h"
+#include "Engine.h"
+#include "Math/Utilities/BoundingBox.h"
+#include "Math/GeometricAlgebra/PScalar2D.h"
 #include <math.h>
 #include <stdlib.h>
 #include <list>
+#include <set>
 
 using namespace PlanarPhysics;
 
@@ -11,6 +17,8 @@ Maze::Maze()
 {
     this->widthCM = 0.0;
     this->heightCM = 0.0;
+    this->cellWidthCM = 0.0;
+    this->cellHeightCM = 0.0;
 }
 
 /*virtual*/ Maze::~Maze()
@@ -30,6 +38,9 @@ bool Maze::Generate(double widthCM, double heightCM, double densityCMPerCell)
 
     if(rows <= 0 || cols <= 0)
         return false;
+
+    this->cellWidthCM = double(cols) / this->widthCM;
+    this->cellHeightCM = double(rows) / this->heightCM;
 
     Node*** matrix = new Node**[rows];
     for(int i = 0; i < rows; i++)
@@ -63,8 +74,8 @@ bool Maze::Generate(double widthCM, double heightCM, double densityCMPerCell)
         for(int j = 0; j < cols; j++)
         {
             Node* node = matrix[i][j];
-            node->center.x = double(j) * densityCMPerCell + densityCMPerCell / 2.0;
-            node->center.y = double(i) * densityCMPerCell + densityCMPerCell / 2.0;
+            node->center.x = double(j) * this->cellWidthCM + this->cellWidthCM / 2.0;
+            node->center.y = double(i) * this->cellHeightCM + this->cellHeightCM / 2.0;
         }
     }
 
@@ -77,7 +88,7 @@ bool Maze::Generate(double widthCM, double heightCM, double densityCMPerCell)
     std::list<Node*> nodeQueue;
     Node* node = this->RandomNode(this->nodeArray);
     nodeQueue.push_back(node);
-    node->partOfMaze = true;
+    node->queued = true;
     while(nodeQueue.size() > 0)
     {
         // Pull a random node off the queue.  The queue is the periphery of a random BFS.
@@ -89,21 +100,22 @@ bool Maze::Generate(double widthCM, double heightCM, double densityCMPerCell)
         for(int i = 0; i < node->adjacentNodeArray.size(); i++)
         {
             adjacentNode = this->RandomNode(node->adjacentNodeArray, &lastRandom);
-            if(adjacentNode->partOfMaze)
+            if(adjacentNode->integrated)
             {
                 node->connectedNodeArray.push_back(adjacentNode);
                 adjacentNode->connectedNodeArray.push_back(node);
                 break;
             }
         }
+        node->integrated = true;
 
         // Queue up any adjacent nodes not yet part of the maze.
         for(Node* adjacentNode : node->adjacentNodeArray)
         {
-            if(!adjacentNode->partOfMaze)
+            if(!adjacentNode->queued && !adjacentNode->integrated)
             {
                 nodeQueue.push_back(adjacentNode);
-                adjacentNode->partOfMaze = true;
+                adjacentNode->queued = true;
             }
         }
     }
@@ -163,7 +175,15 @@ Maze::Node* Maze::RandomNode(std::list<Node*>& nodeList, bool remove)
 
 void Maze::PopulatePhysicsWorld(PlanarPhysics::Engine* engine) const
 {
-    // TODO: This is where we generate the walls of the maze in the physics world.
+    PlanarPhysics::BoundingBox worldBox;
+    worldBox.min = Vector2D(-this->cellWidthCM / 2.0, -this->cellHeightCM / 2.0);
+    worldBox.max = Vector2D(this->widthCM + this->cellWidthCM / 2.0, this->heightCM + this->cellHeightCM / 2.0);
+    engine->SetWorldBox(worldBox);
+
+    for(const Node* node : this->nodeArray)
+    {
+        node->GenerateWalls(engine, this);
+    }
 }
 
 void Maze::Clear()
@@ -178,9 +198,51 @@ void Maze::Clear()
 
 Maze::Node::Node()
 {
-    this->partOfMaze = false;
+    this->queued = false;
+    this->integrated = false;
 }
 
 /*virtual*/ Maze::Node::~Node()
 {
+}
+
+bool Maze::Node::IsConnectedTo(const Node* node) const
+{
+    for(const Node* connectedNode : this->connectedNodeArray)
+        if(connectedNode == node)
+            return true;
+
+    return false;
+}
+
+void Maze::Node::GenerateWalls(PlanarPhysics::Engine* engine, const Maze* maze) const
+{
+    for(const Node* adjacentNode : this->adjacentNodeArray)
+    {
+        if(this->IsConnectedTo(adjacentNode))
+            continue;
+
+        Vector2D wallCenter = (this->center + adjacentNode->center) / 2.0;
+        Vector2D wallNormal = (adjacentNode->center - this->center).Normalized();
+        Vector2D wallTangent = wallNormal * PScalar2D(1.0);
+        double wallSize = 0.0;
+        if(::abs(wallNormal.x) > ::abs(wallNormal.y))
+            wallSize = maze->cellHeightCM;
+        else
+            wallSize = maze->cellWidthCM;
+
+        LineSegment wallSegment(wallCenter + wallTangent * wallSize / 2.0, wallCenter - wallTangent * wallSize / 2.0);
+        if(this->WallAlreadyExists(wallSegment, engine))
+            continue;
+
+        MazeWall* mazeWall = engine->AddPlanarObject<MazeWall>();
+        mazeWall->lineSeg = wallSegment;
+    }
+}
+
+bool Maze::Node::WallAlreadyExists(const PlanarPhysics::LineSegment& wallSegment, PlanarPhysics::Engine* engine) const
+{
+
+
+    return false;
 }

@@ -16,6 +16,11 @@ add_library(gravitymaze SHARED
         AndroidOut.cpp
         Game.cpp
         Maze.cpp
+        Color.cpp
+        DrawHelper.cpp
+        MazeObject.cpp
+        MazeObjects/MazeBall.cpp
+        MazeObjects/MazeWall.cpp
         ${PlanarPhysicsSources})
 
 target_include_directories(gravitymaze PRIVATE "PlanarPhysics/Engine/Source")

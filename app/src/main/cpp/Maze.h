@@ -2,10 +2,13 @@
 
 #include "Engine.h"
 #include "Math/GeometricAlgebra/Vector2D.h"
+#include "Math/Utilities/LineSegment.h"
 #include <vector>
 
 class Maze
 {
+    friend class Node;
+
 public:
     Maze();
     virtual ~Maze();
@@ -24,8 +27,13 @@ private:
         std::vector<Node*> adjacentNodeArray;
         std::vector<Node*> connectedNodeArray;
 
+        bool IsConnectedTo(const Node* node) const;
+        void GenerateWalls(PlanarPhysics::Engine* engine, const Maze* maze) const;
+        bool WallAlreadyExists(const PlanarPhysics::LineSegment& wallSegment, PlanarPhysics::Engine* engine) const;
+
         PlanarPhysics::Vector2D center;
-        bool partOfMaze;
+        bool queued;
+        bool integrated;
     };
 
     int RandomNumber(int min, int max);
@@ -36,4 +44,6 @@ private:
 
     double widthCM;
     double heightCM;
+    double cellWidthCM;
+    double cellHeightCM;
 };

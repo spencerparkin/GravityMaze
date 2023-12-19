@@ -4,6 +4,7 @@
 #include <memory>
 #include "Engine.h"
 #include "Maze.h"
+#include "DrawHelper.h"
 
 struct android_app;
 
@@ -30,4 +31,5 @@ private:
     EGLint surfaceHeight;
     PlanarPhysics::Engine physicsEngine;
     Maze maze;
+    DrawHelper drawHelper;
 };
