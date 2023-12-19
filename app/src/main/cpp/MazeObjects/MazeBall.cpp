@@ -14,7 +14,7 @@ MazeBall::MazeBall()
     return new MazeBall();
 }
 
-/*virtual*/ void MazeBall::Render(DrawHelper& drawHelper)
+/*virtual*/ void MazeBall::Render(DrawHelper& drawHelper) const
 {
     drawHelper.DrawCircle(this->position, this->radius, this->color);
 }

@@ -11,5 +11,5 @@ public:
 
     static MazeBall* Create();
 
-    virtual void Render(DrawHelper& drawHelper) override;
+    virtual void Render(DrawHelper& drawHelper) const override;
 };

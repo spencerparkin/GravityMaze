@@ -8,6 +8,6 @@ MazeObject::MazeObject()
 {
 }
 
-/*virtual*/ void MazeObject::Render(DrawHelper& drawHelper)
+/*virtual*/ void MazeObject::Render(DrawHelper& drawHelper) const
 {
 }

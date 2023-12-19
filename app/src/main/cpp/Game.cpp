@@ -1,4 +1,5 @@
 #include "Game.h"
+#include "MazeObject.h"
 #include <game-activity/native_app_glue/android_native_app_glue.h>
 #include <GLES3/gl3.h>
 #include <memory>
@@ -6,6 +7,8 @@
 #include <assert.h>
 #include <android/imagedecoder.h>
 #include "AndroidOut.h"
+
+using namespace PlanarPhysics;
 
 Game::Game(android_app* app)
 {
@@ -160,16 +163,24 @@ void Game::Render()
         this->surfaceWidth = currentWidth;
         this->surfaceHeight = currentHeight;
 
-        glViewport(0, 0, this->surfaceWidth, this->surfaceHeight);
-
-        // TODO: Update orthographic projection too.
-        //       Note that for this app, our render should not change when the orientation
-        //       of the device changes (e.g., portrait to landscape, they are the same.)
-        //       So here we may need to add a 90-degree rotation to our local-to-world transform.
-        //       I'm not sure!
+        // TODO: Make sure we are no longer coming in here.  According to our manifest, we should always render in portrait mode.
     }
 
     glClear(GL_COLOR_BUFFER_BIT);
+
+    this->drawHelper.BeginRender(&this->physicsEngine);
+
+    const std::vector<PlanarObject*>& planarObjectArray = this->physicsEngine.GetPlanarObjectArray();
+    for(const PlanarObject* planarObject : planarObjectArray)
+    {
+        auto mazeObject = dynamic_cast<const MazeObject*>(planarObject);
+        if(mazeObject)
+        {
+            mazeObject->Render(this->drawHelper);
+        }
+    }
+
+    this->drawHelper.EndRender();
 
     auto swapResult = eglSwapBuffers(this->display, this->surface);
     assert(swapResult == EGL_TRUE);

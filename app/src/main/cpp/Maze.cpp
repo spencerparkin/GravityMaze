@@ -242,7 +242,17 @@ void Maze::Node::GenerateWalls(PlanarPhysics::Engine* engine, const Maze* maze) 
 
 bool Maze::Node::WallAlreadyExists(const PlanarPhysics::LineSegment& wallSegment, PlanarPhysics::Engine* engine) const
 {
+    const std::vector<PlanarObject*>& planarObjectArray = engine->GetPlanarObjectArray();
 
+    for(const PlanarObject* planarObject : planarObjectArray)
+    {
+        auto wall = dynamic_cast<const Wall*>(planarObject);
+        if(wall)
+        {
+            if(wall->lineSeg.SameGeometryAs(wallSegment))
+                return true;
+        }
+    }
 
     return false;
 }

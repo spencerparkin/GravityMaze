@@ -14,7 +14,7 @@ MazeWall::MazeWall()
     return new MazeWall();
 }
 
-/*virtual*/ void MazeWall::Render(DrawHelper& drawHelper)
+/*virtual*/ void MazeWall::Render(DrawHelper& drawHelper) const
 {
     drawHelper.DrawLine(this->lineSeg.vertexA, this->lineSeg.vertexB, this->color);
 }

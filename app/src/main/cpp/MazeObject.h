@@ -10,7 +10,7 @@ public:
     MazeObject();
     virtual ~MazeObject();
 
-    virtual void Render(DrawHelper& drawHelper);
+    virtual void Render(DrawHelper& drawHelper) const;
 
     Color color;
 };
