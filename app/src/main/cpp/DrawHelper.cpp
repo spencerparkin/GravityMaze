@@ -16,12 +16,15 @@ void DrawHelper::BeginRender(PlanarPhysics::Engine* engine)
 
 void DrawHelper::EndRender()
 {
+    // TODO: This is where we make a single draw-call for all line to be drawn.
 }
 
 void DrawHelper::DrawLine(const PlanarPhysics::Vector2D& pointA, const PlanarPhysics::Vector2D& pointB, const Color& color)
 {
+    // Maybe just add to a vertex buffer here.
 }
 
 void DrawHelper::DrawCircle(const PlanarPhysics::Vector2D& center, double radius, const Color& color)
 {
+    // Add more to our vertex buffer here.
 }
