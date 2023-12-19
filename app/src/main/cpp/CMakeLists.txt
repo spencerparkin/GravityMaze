@@ -12,12 +12,9 @@ file(GLOB_RECURSE PlanarPhysicsSources CONFIGURE_DEPENDS
 # Creates your game shared library. The name must be the same as the
 # one used for loading in your Kotlin/Java or AndroidManifest.txt files.
 add_library(gravitymaze SHARED
-        main.cpp
+        Main.cpp
         AndroidOut.cpp
-        Renderer.cpp
-        Shader.cpp
-        TextureAsset.cpp
-        Utility.cpp
+        Game.cpp
         ${PlanarPhysicsSources})
 
 target_include_directories(gravitymaze PRIVATE "PlanarPhysics/Engine/Source")
