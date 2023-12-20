@@ -17,6 +17,8 @@ add_library(gravitymaze SHARED
         Game.cpp
         Maze.cpp
         Color.cpp
+        Shader.cpp
+        ShaderProgram.cpp
         DrawHelper.cpp
         MazeObject.cpp
         MazeObjects/MazeBall.cpp

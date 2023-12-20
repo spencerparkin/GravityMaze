@@ -28,7 +28,10 @@ Game::Game(android_app* app)
 bool Game::Init()
 {
     if(this->initialized)
+    {
+        aout << "Already initialized game!" << std::endl;
         return false;
+    }
 
     this->display = eglGetDisplay(EGL_DEFAULT_DISPLAY);
     if(this->display == EGL_NO_DISPLAY)
@@ -107,6 +110,12 @@ bool Game::Init()
 
     glClearColor(1.0f, 0.0f, 0.0f, 0.0f);
 
+    if(!this->drawHelper.Setup(this->app->activity->assetManager))
+    {
+        aout << "Failed to setup draw-helper." << std::endl;
+        return false;
+    }
+
     this->initialized = true;
     return true;
 }
@@ -135,6 +144,7 @@ bool Game::Shutdown()
 
     this->maze.Clear();
     this->physicsEngine.Clear();
+    this->drawHelper.Shutdown();
 
     this->initialized = false;
     return true;
@@ -157,18 +167,6 @@ void Game::GenerateNextMaze()
 
 void Game::Render()
 {
-    EGLint currentWidth, currentHeight;
-    eglQuerySurface(this->display, this->surface, EGL_WIDTH, &currentWidth);
-    eglQuerySurface(this->display, this->surface, EGL_HEIGHT, &currentHeight);
-
-    if(this->surfaceWidth != currentWidth || this->surfaceHeight != currentHeight)
-    {
-        this->surfaceWidth = currentWidth;
-        this->surfaceHeight = currentHeight;
-
-        // TODO: Make sure we are no longer coming in here.  According to our manifest, we should always render in portrait mode.
-    }
-
     glClear(GL_COLOR_BUFFER_BIT);
 
     this->drawHelper.BeginRender(&this->physicsEngine);

@@ -9,6 +9,19 @@ DrawHelper::DrawHelper()
 {
 }
 
+bool DrawHelper::Setup(AAssetManager* assetManager)
+{
+    if(!this->lineShader.Load("lineFragmentShader.txt", "lineVertexShader.txt", assetManager))
+        return false;
+
+    return true;
+}
+
+bool DrawHelper::Shutdown()
+{
+    return true;
+}
+
 void DrawHelper::BeginRender(PlanarPhysics::Engine* engine)
 {
     // TODO: Make sure our shader is bound.  Make sure its uniforms are up-to-date.  Do other stuff.
