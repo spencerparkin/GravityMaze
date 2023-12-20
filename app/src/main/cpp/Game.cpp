@@ -1,5 +1,6 @@
 #include "Game.h"
 #include "MazeObject.h"
+#include "Math/GeometricAlgebra/Vector2D.h"
 #include <game-activity/native_app_glue/android_native_app_glue.h>
 #include <GLES3/gl3.h>
 #include <memory>
@@ -18,6 +19,9 @@ Game::Game(android_app* app)
     this->context = EGL_NO_CONTEXT;
     this->surfaceWidth = 0;
     this->surfaceHeight = 0;
+    this->sensorManager = nullptr;
+    this->gravitySensor = nullptr;
+    this->sensorEventQueue = nullptr;
 }
 
 /*virtual*/ Game::~Game()
@@ -29,6 +33,60 @@ bool Game::Init()
     if(this->initialized)
     {
         aout << "Already initialized game!" << std::endl;
+        return false;
+    }
+
+    this->sensorManager = ASensorManager_getInstanceForPackage("com.spencer.gravitymaze");
+    if(!this->sensorManager)
+    {
+        aout << "Could not get access to the sensor manager singleton." << std::endl;
+        return false;
+    }
+
+    ASensorList sensorList;
+    int sensorCount = ASensorManager_getSensorList(this->sensorManager, &sensorList);
+    if(sensorCount == 0)
+    {
+        aout << "No sensors found on the device!" << std::endl;
+        return false;
+    }
+
+    aout << "Sensor dump..." << std::endl;
+    for(int i = 0; i < sensorCount; i++)
+    {
+        const ASensor* sensor = sensorList[i];
+        aout << "Sensor #" << i << ": " <<
+                ASensor_getName(sensor) << "/" <<
+                ASensor_getStringType(sensor) << "/" <<
+                ASensor_getReportingMode(sensor) << "/" <<
+                ASensor_getVendor(sensor) << std::endl;
+
+        int sensorType = ASensor_getType(sensor);
+        if(sensorType == ASENSOR_TYPE_GRAVITY)
+        {
+            this->gravitySensor = sensor;
+        }
+    }
+
+    // TODO: Add "<uses-feature android:name="android.hardware.sensor.gyroscope" />" to manifest file in appropriate spot.  Or be able to work with an alternative?
+    //       E.g., fall-back on ASENSOR_TYPE_GAME_ROTATION_VECTOR if no gravity sensor found?
+    if(!this->gravitySensor)
+    {
+        aout << "No game rotation vector sensor found!" << std::endl;
+        return false;
+    }
+
+    ALooper* looper = ALooper_forThread();
+    if(!looper)
+    {
+        aout << "No looper for current thread?" << std::endl;
+        return false;
+    }
+
+    this->sensorEventQueue = ASensorManager_createEventQueue(this->sensorManager, looper, SENSOR_EVENT_ID, nullptr, nullptr);
+    if(!this->sensorEventQueue)
+    {
+        aout << "Failed to create sensor event queue!" << std::endl;
         return false;
     }
 
@@ -115,8 +173,6 @@ bool Game::Init()
         return false;
     }
 
-    // TODO: Init sensor stuff?
-
     this->initialized = true;
     return true;
 }
@@ -148,8 +204,34 @@ bool Game::Shutdown()
     this->maze.Clear();
     this->physicsEngine.Clear();
 
+    if(this->sensorEventQueue)
+    {
+        ASensorManager_destroyEventQueue(this->sensorManager, this->sensorEventQueue);
+        this->sensorEventQueue = nullptr;
+    }
+
+    this->sensorManager = nullptr;
+    this->gravitySensor = nullptr;
+
     this->initialized = false;
     return true;
+}
+
+void Game::HandleSensorEvent(void* data)
+{
+    ASensorEvent sensorEvent;
+    while(ASensorEventQueue_getEvents(this->sensorEventQueue, &sensorEvent, 1) > 0)
+    {
+        switch(sensorEvent.type)
+        {
+            case ASENSOR_TYPE_GRAVITY:
+            {
+                //Vector2D sensedGravityVector(sensorEvent.vector.x, sensorEvent.vector.y, sensorEvent.vector.z);
+                aout << "Gravity sensed: " << sensorEvent.vector.x << ", " << sensorEvent.vector.y << ", " << sensorEvent.vector.z << std::endl;
+                break;
+            }
+        }
+    }
 }
 
 void Game::GenerateNextMaze()
@@ -197,9 +279,4 @@ void Game::Render()
 
     auto swapResult = eglSwapBuffers(this->display, this->surface);
     assert(swapResult == EGL_TRUE);
-}
-
-void Game::HandleInput()
-{
-    //ASENSOR_TYPE_GAME_ROTATION_VECTOR = 15,
 }

@@ -17,10 +17,15 @@ public:
 
     bool Init();
     bool Shutdown();
-    void HandleInput();
     void Render();
     void GenerateNextMaze();
     void Tick();
+    void HandleSensorEvent(void* data);
+
+    enum
+    {
+        SENSOR_EVENT_ID = 100
+    };
 
 private:
 
@@ -34,4 +39,7 @@ private:
     PlanarPhysics::Engine physicsEngine;
     Maze maze;
     DrawHelper drawHelper;
+    ASensorManager* sensorManager;
+    const ASensor* gravitySensor;
+    ASensorEventQueue* sensorEventQueue;
 };
