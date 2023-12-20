@@ -7,12 +7,12 @@ class Color
 public:
     Color();
     Color(const Color& color);
-    Color(GLfloat r, GLfloat g, GLfloat b);
+    Color(double r, double g, double b);
     virtual ~Color();
 
     void operator=(const Color& color);
     void Mix(const Color& colorA, const Color& colorB);
     void Clamp();
 
-    GLfloat r, g, b;
+    double r, g, b;
 };

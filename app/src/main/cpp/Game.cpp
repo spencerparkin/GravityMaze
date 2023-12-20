@@ -155,13 +155,15 @@ void Game::GenerateNextMaze()
 {
     this->maze.Clear();
 
+    ::srand(unsigned(time(nullptr)));
+
     double CMPerPixel = 0.0264583333;   // TODO: Get this by querying the device?
     double widthCM = CMPerPixel * double(this->surfaceWidth);
     double heightCM = CMPerPixel * double(this->surfaceHeight);
 
-    double densityCMPerCell = 10.0;  // TODO: This is supposed to get denser as the player levels up.
+    double densityCellsPerCM = 0.1;  // TODO: This is supposed to get denser as the player levels up.
 
-    this->maze.Generate(widthCM, heightCM, densityCMPerCell);
+    this->maze.Generate(widthCM, heightCM, densityCellsPerCM);
 
     this->maze.PopulatePhysicsWorld(&this->physicsEngine);
 }

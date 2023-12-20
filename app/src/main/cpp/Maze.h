@@ -34,6 +34,7 @@ private:
         PlanarPhysics::Vector2D center;
         bool queued;
         bool integrated;
+        char debugName[128];
     };
 
     int RandomNumber(int min, int max);

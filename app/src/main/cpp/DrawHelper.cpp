@@ -76,8 +76,11 @@ void DrawHelper::EndRender()
         glEnableVertexAttribArray(location);
 
         location = this->lineShader.GetAttributeLocation("vertexColor");
-        glVertexAttribPointer(location, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), vertexBuf + sizeof(Vector2D));
+        glVertexAttribPointer(location, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), vertexBuf + sizeof(GLfloat[2]));
         glEnableVertexAttribArray(location);
+
+        glEnable(GL_BLEND);
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
         glDrawArrays(GL_LINES, 0, this->lineVertexBuffer.size());
     }
@@ -85,8 +88,8 @@ void DrawHelper::EndRender()
 
 void DrawHelper::DrawLine(const PlanarPhysics::Vector2D& pointA, const PlanarPhysics::Vector2D& pointB, const Color& color)
 {
-    this->lineVertexBuffer.push_back(Vertex{(GLfloat)pointA.x, (GLfloat)pointA.y, color});
-    this->lineVertexBuffer.push_back(Vertex{(GLfloat)pointB.x, (GLfloat)pointB.y, color});
+    this->lineVertexBuffer.push_back(Vertex{(GLfloat)pointA.x, (GLfloat)pointA.y, (GLfloat)color.r, (GLfloat)color.g, (GLfloat)color.b});
+    this->lineVertexBuffer.push_back(Vertex{(GLfloat)pointB.x, (GLfloat)pointB.y, (GLfloat)color.r, (GLfloat)color.g, (GLfloat)color.b});
 }
 
 void DrawHelper::DrawCircle(const PlanarPhysics::Vector2D& center, double radius, const Color& color, int numSegments /*= 32*/)

@@ -3,8 +3,9 @@
 #include "Engine.h"
 #include "Math/GeometricAlgebra/Vector2D.h"
 #include "ShaderProgram.h"
-#include "Color.h"
 #include <android/asset_manager.h>
+
+class Color;
 
 class DrawHelper
 {
@@ -27,7 +28,7 @@ private:
     struct Vertex
     {
         GLfloat x, y;
-        Color color;
+        GLfloat r, g, b;
     };
 
     ShaderProgram lineShader;

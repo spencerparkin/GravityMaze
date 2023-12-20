@@ -26,21 +26,21 @@ Maze::Maze()
     this->Clear();
 }
 
-bool Maze::Generate(double widthCM, double heightCM, double densityCMPerCell)
+bool Maze::Generate(double widthCM, double heightCM, double densityCellsPerCM)
 {
     this->Clear();
 
     this->widthCM = widthCM;
     this->heightCM = heightCM;
 
-    int rows = ::round(heightCM / densityCMPerCell);
-    int cols = ::round(widthCM / densityCMPerCell);
+    int rows = ::round(heightCM * densityCellsPerCM);
+    int cols = ::round(widthCM * densityCellsPerCM);
 
     if(rows <= 0 || cols <= 0)
         return false;
 
     this->cellWidthCM = this->widthCM / double(cols);
-    this->cellHeightCM = this->heightCM / double(cols);
+    this->cellHeightCM = this->heightCM / double(rows);
 
     Node*** matrix = new Node**[rows];
     for(int i = 0; i < rows; i++)
@@ -51,6 +51,7 @@ bool Maze::Generate(double widthCM, double heightCM, double densityCMPerCell)
             Node* node = new Node();
             matrix[i][j] = node;
             this->nodeArray.push_back(node);
+            sprintf(node->debugName, "%d, %d", i, j);
         }
     }
 
@@ -60,11 +61,11 @@ bool Maze::Generate(double widthCM, double heightCM, double densityCMPerCell)
         {
             if(i > 0)
                 matrix[i][j]->adjacentNodeArray.push_back(matrix[i - 1][j]);
-            else if(i < rows - 1)
+            if(i < rows - 1)
                 matrix[i][j]->adjacentNodeArray.push_back(matrix[i + 1][j]);
             if(j > 0)
                 matrix[i][j]->adjacentNodeArray.push_back(matrix[i][j - 1]);
-            else if(j < cols - 1)
+            if(j < cols - 1)
                 matrix[i][j]->adjacentNodeArray.push_back(matrix[i][j + 1]);
         }
     }
@@ -188,20 +189,20 @@ void Maze::PopulatePhysicsWorld(PlanarPhysics::Engine* engine) const
     }
 
     MazeWall* mazeWallLeft = engine->AddPlanarObject<MazeWall>();
-    mazeWallLeft->lineSeg.vertexA = worldBox.min;
-    mazeWallLeft->lineSeg.vertexB = Vector2D(worldBox.min.x, worldBox.max.y);
+    mazeWallLeft->lineSeg.vertexA = Vector2D(0.0, 0.0);
+    mazeWallLeft->lineSeg.vertexB = Vector2D(0.0, this->heightCM);
 
     MazeWall* mazeWallRight = engine->AddPlanarObject<MazeWall>();
-    mazeWallRight->lineSeg.vertexA = worldBox.max;
-    mazeWallRight->lineSeg.vertexB = Vector2D(worldBox.max.x, worldBox.min.y);
+    mazeWallRight->lineSeg.vertexA = Vector2D(this->widthCM, 0.0);
+    mazeWallRight->lineSeg.vertexB = Vector2D(this->widthCM, this->heightCM);
 
     MazeWall* mazeWallBottom = engine->AddPlanarObject<MazeWall>();
-    mazeWallBottom->lineSeg.vertexA = worldBox.min;
-    mazeWallBottom->lineSeg.vertexB = Vector2D(worldBox.max.x, worldBox.min.y);
+    mazeWallBottom->lineSeg.vertexA = Vector2D(0.0, 0.0);
+    mazeWallBottom->lineSeg.vertexB = Vector2D(this->widthCM, 0.0);
 
     MazeWall* mazeWallTop = engine->AddPlanarObject<MazeWall>();
-    mazeWallTop->lineSeg.vertexA = worldBox.max;
-    mazeWallTop->lineSeg.vertexB = Vector2D(worldBox.min.x, worldBox.max.y);
+    mazeWallTop->lineSeg.vertexA = Vector2D(0.0, this->heightCM);
+    mazeWallTop->lineSeg.vertexB = Vector2D(this->widthCM, this->heightCM);
 }
 
 void Maze::Clear()
@@ -218,6 +219,7 @@ Maze::Node::Node()
 {
     this->queued = false;
     this->integrated = false;
+    this->debugName[0] = '\0';
 }
 
 /*virtual*/ Maze::Node::~Node()
