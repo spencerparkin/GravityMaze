@@ -168,6 +168,9 @@ void Game::GenerateNextMaze()
 
 void Game::Render()
 {
+    if(!this->initialized)
+        return;
+
     glClear(GL_COLOR_BUFFER_BIT);
 
     this->drawHelper.BeginRender(&this->physicsEngine);

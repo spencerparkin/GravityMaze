@@ -1,10 +1,14 @@
 #version 300 es
 
-in vec3 localPosition;
+in vec2 localPosition;
+in vec3 vertexColor;
 
-uniform mat4 localToWorld;
+out vec3 fragColor;
+
+uniform mat4 projectionMatrix;
 
 void main()
 {
-    gl_Position = localToWorld * vec4(localPosition, 1.0);
+    fragColor = vertexColor;
+    gl_Position = projectionMatrix * vec4(localPosition, 0.0, 1.0);
 }

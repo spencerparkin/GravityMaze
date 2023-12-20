@@ -12,7 +12,7 @@ ShaderProgram::ShaderProgram()
     this->Clear();
 }
 
-bool ShaderProgram::Load(const char* fragShaderFile, const char* vertShaderfile, AAssetManager* assetManager)
+bool ShaderProgram::Load(const char* fragShaderFile, const char* vertShaderFile, AAssetManager* assetManager)
 {
     bool success = false;
 
@@ -26,7 +26,7 @@ bool ShaderProgram::Load(const char* fragShaderFile, const char* vertShaderfile,
         if(!fragShader.Load(fragShaderFile, assetManager))
             break;
 
-        if(!vertShader.Load(vertShaderfile, assetManager))
+        if(!vertShader.Load(vertShaderFile, assetManager))
             break;
 
         this->program = glCreateProgram();
@@ -55,6 +55,19 @@ bool ShaderProgram::Load(const char* fragShaderFile, const char* vertShaderfile,
             break;
         }
 
+        aout << "Dump of attributes..." << std::endl;
+        GLint numAttribs = 0;
+        glGetProgramiv(this->program, GL_ACTIVE_ATTRIBUTES, &numAttribs);
+        for(int i = 0; i < numAttribs; i++)
+        {
+            GLchar attribNameBuf[128];
+            GLsizei attribNameBufLen = 0;
+            GLenum attribType;
+            GLint attribSize = 0;
+            glGetActiveAttrib(this->program, i, sizeof(attribNameBuf), &attribNameBufLen, &attribSize, &attribType, attribNameBuf);
+            aout << "Attribute " << i << " is \"" << attribNameBuf << " of type " << GLint(attribType) << " and size " << attribSize << "." << std::endl;
+        }
+
         success = true;
     }
     while(false);
@@ -77,4 +90,30 @@ void ShaderProgram::Clear()
 void ShaderProgram::Bind()
 {
     glUseProgram(this->program);
+}
+
+GLint ShaderProgram::GetAttributeLocation(const std::string& attribName)
+{
+    std::unordered_map<std::string, GLint>::iterator iter = this->attributeMap.find(attribName);
+    if(iter == this->attributeMap.end())
+    {
+        GLint location = glGetAttribLocation(this->program, attribName.c_str());
+        this->attributeMap.insert(std::pair<std::string, GLint>(attribName, location));
+        return location;
+    }
+
+    return iter->second;
+}
+
+GLint ShaderProgram::GetUniformLocation(const std::string& uniformName)
+{
+    std::unordered_map<std::string, GLint>::iterator iter = this->uniformMap.find(uniformName);
+    if(iter == this->uniformMap.end())
+    {
+        GLint location = glGetUniformLocation(this->program, uniformName.c_str());
+        this->uniformMap.insert(std::pair<std::string, GLint>(uniformName, location));
+        return location;
+    }
+
+    return iter->second;
 }
