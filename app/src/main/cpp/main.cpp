@@ -62,20 +62,38 @@ void android_main(struct android_app* app)
 
     android_app_set_motion_event_filter(app, MotienEventFilter);
 
-    int events = 0;
-    android_poll_source* source = nullptr;
     do
     {
-        if (ALooper_pollAll(0, nullptr, &events, (void **)&source) >= 0)
-        {
-            if (source)
-                source->process(app, source);
-        }
+        Game* game = nullptr;
 
         if (app->userData)
+            game = reinterpret_cast<Game*>(app->userData);
+
+        void* data = nullptr;
+        int events = 0;
+        int id = ALooper_pollAll(0, nullptr, &events, &data);
+        if (id >= 0)
         {
-            auto *game = reinterpret_cast<Game*>(app->userData);
-            game->HandleInput();
+            switch(id)
+            {
+                case Game::SENSOR_EVENT_ID:
+                {
+                    if(game)
+                        game->HandleSensorEvent(data);
+                    break;
+                }
+                default:
+                {
+                    auto source = reinterpret_cast<android_poll_source*>(data);
+                    if (source)
+                        source->process(app, source);
+                    break;
+                }
+            }
+        }
+
+        if(game)
+        {
             game->Tick();
             game->Render();
         }
