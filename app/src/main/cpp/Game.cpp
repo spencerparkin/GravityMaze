@@ -162,7 +162,7 @@ void Game::GenerateNextMaze()
     double widthCM = CMPerPixel * double(this->surfaceWidth);
     double heightCM = CMPerPixel * double(this->surfaceHeight);
 
-    double densityCellsPerCM = 0.1;  // TODO: This is supposed to get denser as the player levels up.
+    double densityCellsPerCM = 0.4;  // TODO: This is supposed to get denser as the player levels up.
 
     this->maze.Generate(widthCM, heightCM, densityCellsPerCM);
 
