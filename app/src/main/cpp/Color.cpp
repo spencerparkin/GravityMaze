@@ -14,7 +14,7 @@ Color::Color(const Color& color)
     this->b = color.b;
 }
 
-Color::Color(double r, double g, double b)
+Color::Color(GLfloat r, GLfloat g, GLfloat b)
 {
     this->r = r;
     this->g = g;
@@ -43,18 +43,18 @@ void Color::Mix(const Color& colorA, const Color& colorB)
 
 void Color::Clamp()
 {
-    if(this->r < 0.0)
-        this->r = 0.0;
-    else if(this->r > 1.0)
-        this->r = 1.0;
+    if(this->r < 0.0f)
+        this->r = 0.0f;
+    else if(this->r > 1.0f)
+        this->r = 1.0f;
 
-    if(this->g < 0.0)
-        this->g = 0.0;
-    else if(this->g > 1.0)
-            this->g = 1.0;
+    if(this->g < 0.0f)
+        this->g = 0.0f;
+    else if(this->g > 1.0f)
+            this->g = 1.0f;
 
-    if(this->b < 0.0)
-        this->b = 0.0;
-    else if(this->b > 1.0)
-            this->b = 1.0;
+    if(this->b < 0.0f)
+        this->b = 0.0f;
+    else if(this->b > 1.0f)
+            this->b = 1.0f;
 }

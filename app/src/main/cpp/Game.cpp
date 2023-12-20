@@ -108,7 +108,7 @@ bool Game::Init()
 
     glViewport(0, 0, this->surfaceWidth, this->surfaceHeight);
 
-    glClearColor(1.0f, 0.0f, 0.0f, 0.0f);
+    glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
 
     if(!this->drawHelper.Setup(this->app->activity->assetManager))
     {

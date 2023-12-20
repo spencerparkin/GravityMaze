@@ -22,9 +22,11 @@ public:
     void DrawCircle(const PlanarPhysics::Vector2D& center, double radius, const Color& color, int numSegments = 32);
 
 private:
+    void SetOrthographicProjection(float left, float right, float bottom, float top, float near, float far);
+
     struct Vertex
     {
-        PlanarPhysics::Vector2D position;
+        GLfloat x, y;
         Color color;
     };
 

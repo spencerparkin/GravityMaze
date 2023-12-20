@@ -5,6 +5,7 @@ using namespace PlanarPhysics;
 
 DrawHelper::DrawHelper()
 {
+    ::memset(this->projectionMatrix, 0, sizeof(this->projectionMatrix));
 }
 
 /*virtual*/ DrawHelper::~DrawHelper()
@@ -26,33 +27,35 @@ bool DrawHelper::Shutdown()
     return true;
 }
 
-void DrawHelper::BeginRender(PlanarPhysics::Engine* engine)
+void DrawHelper::SetOrthographicProjection(float left, float right, float bottom, float top, float near, float far)
 {
-    // The world-box aspect ratio should already match that of the screen.
-    const BoundingBox& worldBox = engine->GetWorldBox();
-
-    float worldWidth = worldBox.Width();
-    float worldHeight = worldBox.Height();
-
-    this->projectionMatrix[0] = 2.0f / worldWidth;
+    this->projectionMatrix[0] = 2.0f / (right - left);
     this->projectionMatrix[1] = 0.0f;
     this->projectionMatrix[2] = 0.0f;
     this->projectionMatrix[3] = 0.0f;
 
     this->projectionMatrix[4] = 0.0f;
-    this->projectionMatrix[5] = 2.0f / worldHeight;
+    this->projectionMatrix[5] = 2.0f / (top - bottom);
     this->projectionMatrix[6] = 0.0f;
     this->projectionMatrix[7] = 0.0f;
 
     this->projectionMatrix[8] = 0.0f;
     this->projectionMatrix[9] = 0.0f;
-    this->projectionMatrix[10] = 1.0f;
+    this->projectionMatrix[10] = 2.0 / (far - near);
     this->projectionMatrix[11] = 0.0f;
 
-    this->projectionMatrix[12] = -1.0f;
-    this->projectionMatrix[13] = -1.0f;
-    this->projectionMatrix[14] = 0.0f;
+    this->projectionMatrix[12] = -(right + left) / (right - left);
+    this->projectionMatrix[13] = -(top + bottom) / (top - bottom);
+    this->projectionMatrix[14] = -(far + near) / (far - near);
     this->projectionMatrix[15] = 1.0f;
+}
+
+void DrawHelper::BeginRender(PlanarPhysics::Engine* engine)
+{
+    // The world-box aspect ratio should already match that of the screen.
+    const BoundingBox& worldBox = engine->GetWorldBox();
+
+    this->SetOrthographicProjection(worldBox.min.x, worldBox.max.x, worldBox.min.y, worldBox.max.y, -1.0, 1.0);
 
     this->lineVertexBuffer.clear();
 }
@@ -82,8 +85,8 @@ void DrawHelper::EndRender()
 
 void DrawHelper::DrawLine(const PlanarPhysics::Vector2D& pointA, const PlanarPhysics::Vector2D& pointB, const Color& color)
 {
-    this->lineVertexBuffer.push_back(Vertex{pointA, color});
-    this->lineVertexBuffer.push_back(Vertex{pointB, color});
+    this->lineVertexBuffer.push_back(Vertex{(GLfloat)pointA.x, (GLfloat)pointA.y, color});
+    this->lineVertexBuffer.push_back(Vertex{(GLfloat)pointB.x, (GLfloat)pointB.y, color});
 }
 
 void DrawHelper::DrawCircle(const PlanarPhysics::Vector2D& center, double radius, const Color& color, int numSegments /*= 32*/)

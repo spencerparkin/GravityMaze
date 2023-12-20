@@ -39,8 +39,8 @@ bool Maze::Generate(double widthCM, double heightCM, double densityCMPerCell)
     if(rows <= 0 || cols <= 0)
         return false;
 
-    this->cellWidthCM = double(cols) / this->widthCM;
-    this->cellHeightCM = double(rows) / this->heightCM;
+    this->cellWidthCM = this->widthCM / double(cols);
+    this->cellHeightCM = this->heightCM / double(cols);
 
     Node*** matrix = new Node**[rows];
     for(int i = 0; i < rows; i++)
@@ -186,6 +186,22 @@ void Maze::PopulatePhysicsWorld(PlanarPhysics::Engine* engine) const
     {
         node->GenerateWalls(engine, this);
     }
+
+    MazeWall* mazeWallLeft = engine->AddPlanarObject<MazeWall>();
+    mazeWallLeft->lineSeg.vertexA = worldBox.min;
+    mazeWallLeft->lineSeg.vertexB = Vector2D(worldBox.min.x, worldBox.max.y);
+
+    MazeWall* mazeWallRight = engine->AddPlanarObject<MazeWall>();
+    mazeWallRight->lineSeg.vertexA = worldBox.max;
+    mazeWallRight->lineSeg.vertexB = Vector2D(worldBox.max.x, worldBox.min.y);
+
+    MazeWall* mazeWallBottom = engine->AddPlanarObject<MazeWall>();
+    mazeWallBottom->lineSeg.vertexA = worldBox.min;
+    mazeWallBottom->lineSeg.vertexB = Vector2D(worldBox.max.x, worldBox.min.y);
+
+    MazeWall* mazeWallTop = engine->AddPlanarObject<MazeWall>();
+    mazeWallTop->lineSeg.vertexA = worldBox.max;
+    mazeWallTop->lineSeg.vertexB = Vector2D(worldBox.min.x, worldBox.max.y);
 }
 
 void Maze::Clear()
