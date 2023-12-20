@@ -5,7 +5,6 @@
 #include <memory>
 #include <vector>
 #include <assert.h>
-#include <android/imagedecoder.h>
 #include "AndroidOut.h"
 
 using namespace PlanarPhysics;
@@ -116,6 +115,8 @@ bool Game::Init()
         return false;
     }
 
+    // TODO: Init sensor stuff?
+
     this->initialized = true;
     return true;
 }
@@ -200,26 +201,5 @@ void Game::Render()
 
 void Game::HandleInput()
 {
-    auto* inputBuffer = android_app_swap_input_buffers(this->app);
-    if (!inputBuffer)
-        return;
-
-    for (int i = 0; i < inputBuffer->motionEventsCount; i++)
-    {
-        auto& motionEvent = inputBuffer->motionEvents[i];
-        auto action = motionEvent.action;
-
-        //...
-    }
-
-    android_app_clear_motion_events(inputBuffer);
-
-    for (auto i = 0; i < inputBuffer->keyEventsCount; i++)
-    {
-        auto& keyEvent = inputBuffer->keyEvents[i];
-
-        //...
-    }
-
-    android_app_clear_key_events(inputBuffer);
+    //ASENSOR_TYPE_GAME_ROTATION_VECTOR = 15,
 }

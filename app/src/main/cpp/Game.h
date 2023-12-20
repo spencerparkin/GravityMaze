@@ -2,6 +2,7 @@
 
 #include <EGL/egl.h>
 #include <memory>
+#include <android/sensor.h>
 #include "Engine.h"
 #include "Maze.h"
 #include "DrawHelper.h"

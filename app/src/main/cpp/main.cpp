@@ -50,9 +50,8 @@ void HandleCommand(android_app* app, int32_t cmd)
 
 bool MotienEventFilter(const GameActivityMotionEvent *motionEvent)
 {
-    // TODO: The only events I'll want initially are those indicating the orientation of the device.
     auto sourceClass = motionEvent->source & AINPUT_SOURCE_CLASS_MASK;
-    return sourceClass == AINPUT_SOURCE_CLASS_POINTER || sourceClass == AINPUT_SOURCE_CLASS_JOYSTICK;
+    return sourceClass == AINPUT_SOURCE_SENSOR;
 }
 
 void android_main(struct android_app* app)
