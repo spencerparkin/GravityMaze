@@ -178,9 +178,14 @@ void Maze::PopulatePhysicsWorld(PlanarPhysics::Engine* engine) const
 {
     engine->Clear();
 
-    PlanarPhysics::BoundingBox worldBox;
-    worldBox.min = Vector2D(-this->cellWidthCM / 2.0, -this->cellHeightCM / 2.0);
-    worldBox.max = Vector2D(this->widthCM + this->cellWidthCM / 2.0, this->heightCM + this->cellHeightCM / 2.0);
+    PlanarPhysics::BoundingBox mazeBox;
+    mazeBox.min = Vector2D(0.0, 0.0);
+    mazeBox.max = Vector2D(this->widthCM, this->heightCM);
+
+    PlanarPhysics::BoundingBox worldBox(mazeBox);
+    worldBox.min.x -= 0.5;
+    worldBox.max.x += 0.5;
+    worldBox.MatchAspectRatio(mazeBox.AspectRatio(), BoundingBox::MatchMethod::EXPAND);
     engine->SetWorldBox(worldBox);
 
     for(const Node* node : this->nodeArray)
@@ -203,6 +208,10 @@ void Maze::PopulatePhysicsWorld(PlanarPhysics::Engine* engine) const
     MazeWall* mazeWallTop = engine->AddPlanarObject<MazeWall>();
     mazeWallTop->lineSeg.vertexA = Vector2D(0.0, this->heightCM);
     mazeWallTop->lineSeg.vertexB = Vector2D(this->widthCM, this->heightCM);
+
+    MazeBall* mazeBall = engine->AddPlanarObject<MazeBall>();
+    mazeBall->position = this->nodeArray[0]->center;
+    mazeBall->radius = this->cellWidthCM / 3.0;
 }
 
 void Maze::Clear()
