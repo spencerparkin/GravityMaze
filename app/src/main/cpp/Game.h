@@ -19,6 +19,7 @@ public:
     void HandleInput();
     void Render();
     void GenerateNextMaze();
+    void Tick();
 
 private:
 

@@ -77,6 +77,7 @@ void android_main(struct android_app* app)
         {
             auto *game = reinterpret_cast<Game*>(app->userData);
             game->HandleInput();
+            game->Tick();
             game->Render();
         }
     }

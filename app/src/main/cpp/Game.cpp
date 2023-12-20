@@ -168,6 +168,11 @@ void Game::GenerateNextMaze()
     this->maze.PopulatePhysicsWorld(&this->physicsEngine);
 }
 
+void Game::Tick()
+{
+    this->physicsEngine.Tick();
+}
+
 void Game::Render()
 {
     if(!this->initialized)

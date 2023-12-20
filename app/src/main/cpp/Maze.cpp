@@ -188,6 +188,9 @@ void Maze::PopulatePhysicsWorld(PlanarPhysics::Engine* engine) const
     worldBox.MatchAspectRatio(mazeBox.AspectRatio(), BoundingBox::MatchMethod::EXPAND);
     engine->SetWorldBox(worldBox);
 
+    engine->accelerationDueToGravity = Vector2D(0.0, -98.0);
+    engine->SetCoefOfRestForAllCHs(0.5);
+
     for(const Node* node : this->nodeArray)
     {
         node->GenerateWalls(engine, this);
@@ -212,6 +215,7 @@ void Maze::PopulatePhysicsWorld(PlanarPhysics::Engine* engine) const
     MazeBall* mazeBall = engine->AddPlanarObject<MazeBall>();
     mazeBall->position = this->nodeArray[0]->center;
     mazeBall->radius = this->cellWidthCM / 3.0;
+    mazeBall->SetFlags(PLNR_OBJ_FLAG_INFLUENCED_BY_GRAVITY);
 }
 
 void Maze::Clear()
