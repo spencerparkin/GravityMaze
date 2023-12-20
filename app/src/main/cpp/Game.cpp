@@ -122,6 +122,8 @@ bool Game::Init()
 
 bool Game::Shutdown()
 {
+    this->drawHelper.Shutdown();
+
     if (this->display != EGL_NO_DISPLAY)
     {
         eglMakeCurrent(this->display, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
@@ -144,7 +146,6 @@ bool Game::Shutdown()
 
     this->maze.Clear();
     this->physicsEngine.Clear();
-    this->drawHelper.Shutdown();
 
     this->initialized = false;
     return true;
