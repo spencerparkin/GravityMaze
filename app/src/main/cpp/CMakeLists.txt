@@ -23,6 +23,7 @@ add_library(gravitymaze SHARED
         MazeObject.cpp
         MazeObjects/MazeBall.cpp
         MazeObjects/MazeWall.cpp
+        MazeObjects/MazeBlock.cpp
         ${PlanarPhysicsSources})
 
 target_include_directories(gravitymaze PRIVATE "PlanarPhysics/Engine/Source")
