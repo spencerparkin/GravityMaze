@@ -48,10 +48,15 @@ void HandleCommand(android_app* app, int32_t cmd)
     }
 }
 
-bool MotienEventFilter(const GameActivityMotionEvent *motionEvent)
+bool MotienEventFilter(const GameActivityMotionEvent* motionEvent)
 {
     auto sourceClass = motionEvent->source & AINPUT_SOURCE_CLASS_MASK;
-    return sourceClass == AINPUT_SOURCE_SENSOR;
+    if(sourceClass == AINPUT_SOURCE_SENSOR)
+    {
+        aout << "Got sensor event?" << std::endl;
+    }
+
+    return true;
 }
 
 void android_main(struct android_app* app)

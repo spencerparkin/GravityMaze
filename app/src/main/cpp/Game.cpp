@@ -60,23 +60,19 @@ bool Game::Init()
                 ASensor_getStringType(sensor) << "/" <<
                 ASensor_getReportingMode(sensor) << "/" <<
                 ASensor_getVendor(sensor) << std::endl;
-
-        int sensorType = ASensor_getType(sensor);
-        if(sensorType == ASENSOR_TYPE_GRAVITY)
-        {
-            this->gravitySensor = sensor;
-        }
     }
 
-    // TODO: Add "<uses-feature android:name="android.hardware.sensor.gyroscope" />" to manifest file in appropriate spot.  Or be able to work with an alternative?
+    // TODO: Add "<uses-feature android:name="android.hardware.sensor.gyroscope" />" to manifest file in appropriate spot.
+    //       Or be able to work with an alternative?
     //       E.g., fall-back on ASENSOR_TYPE_GAME_ROTATION_VECTOR if no gravity sensor found?
+    this->gravitySensor = ASensorManager_getDefaultSensorEx(this->sensorManager, ASENSOR_TYPE_GRAVITY, false);
     if(!this->gravitySensor)
     {
         aout << "No game rotation vector sensor found!" << std::endl;
         return false;
     }
 
-    ALooper* looper = ALooper_forThread();
+    ALooper* looper = ALooper_prepare(ALOOPER_PREPARE_ALLOW_NON_CALLBACKS);
     if(!looper)
     {
         aout << "No looper for current thread?" << std::endl;
@@ -87,6 +83,12 @@ bool Game::Init()
     if(!this->sensorEventQueue)
     {
         aout << "Failed to create sensor event queue!" << std::endl;
+        return false;
+    }
+
+    if(0 != ASensorEventQueue_enableSensor(this->sensorEventQueue, this->gravitySensor))
+    {
+        aout << "Failed to enable gravity sensor!" << std::endl;
         return false;
     }
 
@@ -206,6 +208,9 @@ bool Game::Shutdown()
 
     if(this->sensorEventQueue)
     {
+        if(this->gravitySensor)
+            ASensorEventQueue_disableSensor(this->sensorEventQueue, this->gravitySensor);
+
         ASensorManager_destroyEventQueue(this->sensorManager, this->sensorEventQueue);
         this->sensorEventQueue = nullptr;
     }
