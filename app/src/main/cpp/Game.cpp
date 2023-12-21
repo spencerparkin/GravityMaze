@@ -231,8 +231,12 @@ void Game::HandleSensorEvent(void* data)
         {
             case ASENSOR_TYPE_GRAVITY:
             {
-                //Vector2D sensedGravityVector(sensorEvent.vector.x, sensorEvent.vector.y, sensorEvent.vector.z);
-                aout << "Gravity sensed: " << sensorEvent.vector.x << ", " << sensorEvent.vector.y << ", " << sensorEvent.vector.z << std::endl;
+                //aout << "Gravity sensed: " << sensorEvent.vector.x << ", " << sensorEvent.vector.y << ", " << sensorEvent.vector.z << std::endl;
+
+                double gravityAccel = 98.0;
+                this->physicsEngine.accelerationDueToGravity = Vector2D(-sensorEvent.vector.x, -sensorEvent.vector.y).Normalized();
+                this->physicsEngine.accelerationDueToGravity *= gravityAccel * ::abs(1.0 - ::abs(sensorEvent.vector.z / 9.8));
+
                 break;
             }
         }
