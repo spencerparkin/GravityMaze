@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".MainMenu">
+
+    <Button
+        android:id="@+id/resume_game"
+        android:layout_width="246dp"
+        android:layout_height="56dp"
+        android:layout_marginTop="16dp"
+        android:text="Resume Your Quest to Save the Universe!"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/tweak_options" />
+
+    <Button
+        android:id="@+id/tweak_options"
+        android:layout_width="245dp"
+        android:layout_height="52dp"
+        android:layout_marginTop="32dp"
+        android:text="Tweak the Options, Bro"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/game_explanation" />
+
+    <TextView
+        android:id="@+id/game_explanation"
+        android:layout_width="359dp"
+        android:layout_height="138dp"
+        android:text="Welcome to Gravity Maze, the most a-maze-ing game ever invented for a mobile device!  You are on a quest to save the universe!  Unless you complete all the mazes, the evil queen (who's name is not pronouncable by humans) from beyond the outer rim will destroy the universe using the evil magic that exhudes forth from her nostrils.  Can we count on you?"
+        android:textAlignment="center"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        tools:layout_editor_absoluteY="49dp" />
+
+    <TextView
+        android:id="@+id/game_stats"
+        android:layout_width="325dp"
+        android:layout_height="178dp"
+        android:layout_marginTop="36dp"
+        android:text="Game stats go here..."
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/resume_game" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>
