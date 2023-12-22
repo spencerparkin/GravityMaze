@@ -33,10 +33,9 @@ class OptionsActivity : AppCompatActivity() {
         val jsonString = if(file.exists()) {
             file.readText()
         } else {
-            "{" +
-                "\"gravity\": 98.0," +
-                "\"bounce\": 0.5" +
-            "}"
+            application.assets.open("default_options.json").bufferedReader().use {
+                it.readText()
+            }
         }
 
         val options = Json.parseToJsonElement(jsonString).jsonObject
