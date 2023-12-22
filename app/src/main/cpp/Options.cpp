@@ -1,4 +1,6 @@
 #include "Options.h"
+#include "JsonValue.h"
+#include "AndroidOut.h"
 #include <game-activity/native_app_glue/android_native_app_glue.h>
 #include <android/native_activity.h>
 #include <android/asset_manager.h>
@@ -6,10 +8,12 @@
 #include <stdlib.h>
 #include <string.h>
 
+using namespace ParseParty;
+
 Options::Options()
 {
-    this->gravity = 0.0;
-    this->bounce = 0.0;
+    this->gravity = 98.0;
+    this->bounce = 0.5;
 }
 
 /*virtual*/ Options::~Options()
@@ -37,10 +41,15 @@ bool Options::Load(android_app* app)
             return true;
     }
 
+    aout << "Options file didn't exist or didn't open, so falling back on default options." << std::endl;
+
     strcpy(optionsFile, "default_options.json");
     AAsset* optionsAsset = AAssetManager_open(app->activity->assetManager, optionsFile, AASSET_MODE_STREAMING);
     if(!optionsAsset)
+    {
+        aout << "Failed to open default options file." << std::endl;
         return false;
+    }
 
     const char* optionsJsonBuf = (const char*)AAsset_getBuffer(optionsAsset);
     int optionsJsonBufSize = AAsset_getLength(optionsAsset);
@@ -49,6 +58,29 @@ bool Options::Load(android_app* app)
 
 bool Options::LoadFromString(const char* optionsJsonBuf, int optionsJsonBufSize)
 {
-    // TODO: Load from string here.
+    std::string optionsJsonStr(optionsJsonBuf);
+    std::string parseError;
+    std::unique_ptr<JsonValue> jsonData(JsonValue::ParseJson(optionsJsonBuf, parseError));
+    if(!jsonData)
+    {
+        aout << "Failed to parse options file!" << std::endl;
+        return false;
+    }
+
+    auto jsonOptions = dynamic_cast<const JsonObject*>(jsonData.get());
+    if(!jsonOptions)
+    {
+        aout << "Parsed JSON was not an object at its root." << std::endl;
+        return false;
+    }
+
+    auto jsonGravity = dynamic_cast<const JsonFloat*>(jsonOptions->GetValue("gravity"));
+    if(jsonGravity)
+        this->gravity = jsonGravity->GetValue();
+
+    auto jsonBounce = dynamic_cast<const JsonFloat*>(jsonOptions->GetValue("bounce"));
+    if(jsonBounce)
+        this->bounce = jsonBounce->GetValue();
+
     return true;
 }
