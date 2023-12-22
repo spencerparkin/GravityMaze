@@ -6,6 +6,7 @@
 #include "Engine.h"
 #include "Maze.h"
 #include "DrawHelper.h"
+#include "Options.h"
 
 struct android_app;
 
@@ -42,4 +43,5 @@ private:
     ASensorManager* sensorManager;
     const ASensor* gravitySensor;
     ASensorEventQueue* sensorEventQueue;
+    Options options;
 };

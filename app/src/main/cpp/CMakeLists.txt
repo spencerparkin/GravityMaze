@@ -15,6 +15,7 @@ add_library(gravitymaze SHARED
         Main.cpp
         AndroidOut.cpp
         Game.cpp
+        Options.cpp
         Maze.cpp
         Color.cpp
         Shader.cpp

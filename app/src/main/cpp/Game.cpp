@@ -6,6 +6,7 @@
 #include <memory>
 #include <vector>
 #include <assert.h>
+#include <filesystem>
 #include "AndroidOut.h"
 
 using namespace PlanarPhysics;
@@ -33,6 +34,12 @@ bool Game::Init()
     if(this->initialized)
     {
         aout << "Already initialized game!" << std::endl;
+        return false;
+    }
+
+    if(!this->options.Load(this->app))
+    {
+        aout << "Failed to load options!" << std::endl;
         return false;
     }
 
