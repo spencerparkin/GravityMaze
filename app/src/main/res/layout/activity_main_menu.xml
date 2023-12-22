@@ -11,7 +11,7 @@
         android:layout_width="246dp"
         android:layout_height="56dp"
         android:layout_marginTop="16dp"
-        android:text="Resume Your Quest to Save the Universe!"
+        android:text="@string/resumeGame"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/tweak_options" />
@@ -21,7 +21,7 @@
         android:layout_width="245dp"
         android:layout_height="52dp"
         android:layout_marginTop="32dp"
-        android:text="Tweak the Options, Bro"
+        android:text="@string/tweakOptions"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/game_explanation" />
@@ -31,7 +31,7 @@
         android:layout_width="359dp"
         android:layout_height="138dp"
         android:layout_marginTop="44dp"
-        android:text="Welcome to Gravity Maze, the most a-maze-ing game ever invented for a mobile device!  You are on a quest to save the universe!  Unless you complete all the mazes, the evil queen (who's name is not pronouncable by humans) from beyond the outer rim will destroy the universe using the evil magic that exhudes forth from her nostrils.  Can we count on you?"
+        android:text="@string/gameExplanation"
         android:textAlignment="center"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"

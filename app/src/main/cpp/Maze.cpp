@@ -192,6 +192,7 @@ void Maze::PopulatePhysicsWorld(PlanarPhysics::Engine* engine) const
     engine->accelerationDueToGravity = Vector2D(0.0, -98.0);
     engine->SetCoefOfRestForAllCHs(0.5);
 
+    // TODO: This could be optimized a bit by merging walls that are adjacent and collinear.
     for(const Node* node : this->nodeArray)
         node->GenerateWalls(engine, this);
 
