@@ -1,6 +1,7 @@
 #include "Maze.h"
 #include "MazeObjects/MazeWall.h"
 #include "MazeObjects/MazeBall.h"
+#include "MazeObjects/MazeBlock.h"
 #include "Engine.h"
 #include "Math/Utilities/BoundingBox.h"
 #include "Math/GeometricAlgebra/PScalar2D.h"
@@ -192,9 +193,7 @@ void Maze::PopulatePhysicsWorld(PlanarPhysics::Engine* engine) const
     engine->SetCoefOfRestForAllCHs(0.5);
 
     for(const Node* node : this->nodeArray)
-    {
         node->GenerateWalls(engine, this);
-    }
 
     MazeWall* mazeWallLeft = engine->AddPlanarObject<MazeWall>();
     mazeWallLeft->lineSeg.vertexA = Vector2D(0.0, 0.0);
@@ -215,7 +214,22 @@ void Maze::PopulatePhysicsWorld(PlanarPhysics::Engine* engine) const
     MazeBall* mazeBall = engine->AddPlanarObject<MazeBall>();
     mazeBall->position = this->nodeArray[0]->center;
     mazeBall->radius = this->cellWidthCM / 3.0;
+    mazeBall->color = Color(0.0, 1.0, 0.0);
     mazeBall->SetFlags(PLNR_OBJ_FLAG_INFLUENCED_BY_GRAVITY);
+
+    MazeBlock* mazeBlock = engine->AddPlanarObject<MazeBlock>();
+    mazeBlock->position = this->nodeArray[this->nodeArray.size() - 1]->center;
+    mazeBlock->color = Color(1.0, 0.0, 0.0);
+    mazeBlock->SetFlags(PLNR_OBJ_FLAG_INFLUENCED_BY_GRAVITY);
+
+    double squareSize = this->cellWidthCM / 6.0;
+    std::vector<Vector2D> pointArray;
+    pointArray.push_back(Vector2D(-squareSize, -squareSize));
+    pointArray.push_back(Vector2D(-squareSize, squareSize));
+    pointArray.push_back(Vector2D(squareSize, -squareSize));
+    pointArray.push_back(Vector2D(squareSize, squareSize));
+
+    mazeBlock->MakeShape(pointArray, 1.0);
 }
 
 void Maze::Clear()
