@@ -14,6 +14,9 @@
         android:theme="@style/Theme.GravityMaze"
         tools:targetApi="31">
         <activity
+            android:name=".OptionsActivity"
+            android:exported="false" />
+        <activity
             android:name=".MainMenu"
             android:exported="true">
             <intent-filter>

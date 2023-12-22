@@ -16,5 +16,11 @@ class MainMenu : AppCompatActivity() {
             val intent = Intent(this, MainActivity::class.java)
             startActivity(intent)
         }
+
+        findViewById<Button>(R.id.tweak_options).setOnClickListener {
+            Log.d("GRAVITY MAZE", "User tapped options button.")
+            val intent = Intent(this, OptionsActivity::class.java)
+            startActivity(intent)
+        }
     }
 }

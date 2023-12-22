@@ -30,11 +30,12 @@
         android:id="@+id/game_explanation"
         android:layout_width="359dp"
         android:layout_height="138dp"
+        android:layout_marginTop="44dp"
         android:text="Welcome to Gravity Maze, the most a-maze-ing game ever invented for a mobile device!  You are on a quest to save the universe!  Unless you complete all the mazes, the evil queen (who's name is not pronouncable by humans) from beyond the outer rim will destroy the universe using the evil magic that exhudes forth from her nostrils.  Can we count on you?"
         android:textAlignment="center"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        tools:layout_editor_absoluteY="49dp" />
+        app:layout_constraintTop_toTopOf="parent" />
 
     <TextView
         android:id="@+id/game_stats"
