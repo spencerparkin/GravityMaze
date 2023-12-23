@@ -28,6 +28,8 @@ public:
         SENSOR_EVENT_ID = 100
     };
 
+    const Options& GetOptions() const { return this->options; }
+
 private:
 
     android_app* app;

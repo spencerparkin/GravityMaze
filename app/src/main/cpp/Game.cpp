@@ -240,9 +240,9 @@ void Game::HandleSensorEvent(void* data)
             {
                 //aout << "Gravity sensed: " << sensorEvent.vector.x << ", " << sensorEvent.vector.y << ", " << sensorEvent.vector.z << std::endl;
 
-                double gravityAccel = 98.0;
+                double gravityAccel = this->options.gravity;
                 this->physicsEngine.accelerationDueToGravity = Vector2D(-sensorEvent.vector.x, -sensorEvent.vector.y).Normalized();
-                this->physicsEngine.accelerationDueToGravity *= gravityAccel * ::abs(1.0 - ::abs(sensorEvent.vector.z / 9.8));
+                this->physicsEngine.accelerationDueToGravity *= gravityAccel * ::sqrt(::abs(1.0 - ::abs(sensorEvent.vector.z / 9.8)));
 
                 break;
             }
@@ -265,6 +265,9 @@ void Game::GenerateNextMaze()
     this->maze.Generate(widthCM, heightCM, densityCellsPerCM);
 
     this->maze.PopulatePhysicsWorld(&this->physicsEngine);
+
+    this->physicsEngine.accelerationDueToGravity = Vector2D(0.0, -this->options.gravity);
+    this->physicsEngine.SetCoefOfRestForAllCHs(this->options.bounce);
 }
 
 void Game::Tick()

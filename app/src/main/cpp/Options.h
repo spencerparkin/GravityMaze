@@ -13,6 +13,7 @@ public:
 private:
     bool LoadFromString(const char* optionsJsonBuf, int optionsJsonBufSize);
 
+public:
     double gravity;
     double bounce;
 };
