@@ -64,6 +64,7 @@ bool Options::LoadFromString(const char* optionsJsonBuf, int optionsJsonBufSize)
     if(!jsonData)
     {
         aout << "Failed to parse options file!" << std::endl;
+        aout << "Parse error: " + parseError << std::endl;
         return false;
     }
 
