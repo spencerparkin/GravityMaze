@@ -30,6 +30,12 @@ bool Maze::Generate(double widthCM, double heightCM, double densityCellsPerCM)
 {
     this->Clear();
 
+    // TODO: We should not care about width and height here.  Our cell width/height
+    //       should always be the same so as to lend ourselves to the tolerance
+    //       callibration of the physics engine.  We can always draw the maze at
+    //       whatever scale we want, but the physics world should always be as big
+    //       or small as we need it to be in order to conform with the physics tuning.
+
     this->widthCM = widthCM;
     this->heightCM = heightCM;
 
