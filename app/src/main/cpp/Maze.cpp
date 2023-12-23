@@ -184,8 +184,8 @@ void Maze::PopulatePhysicsWorld(PlanarPhysics::Engine* engine) const
     mazeBox.max = Vector2D(this->widthCM, this->heightCM);
 
     PlanarPhysics::BoundingBox worldBox(mazeBox);
-    worldBox.min.x -= 0.5;
-    worldBox.max.x += 0.5;
+    worldBox.min.y -= 5.0;
+    worldBox.max.y += 5.0;
     worldBox.MatchAspectRatio(mazeBox.AspectRatio(), BoundingBox::MatchMethod::EXPAND);
     engine->SetWorldBox(worldBox);
 
