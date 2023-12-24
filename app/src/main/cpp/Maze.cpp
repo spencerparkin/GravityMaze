@@ -164,6 +164,15 @@ Maze::Node* Maze::RandomNode(std::list<Node*>& nodeList, bool remove)
     return node;
 }
 
+// TODO: There are still a ton of bugs in the dynamics and collision handling.
+//       I need to do more testing on PC using the SDL test application.
+//       I think that the "resting contact" logic is flawed.  An idea of friction
+//       might need to be introduced.  There's some really bad tunneling going on,
+//       and blocks tend to tunnel all the way through and fall out of the maze
+//       into eternity.  Also, is the irregular rate of travel a performance issue,
+//       or is it part of the "resting contact" fiasco?  I don't know.  The physics
+//       is just really stupid and flawed.  Before any kind of game logic could
+//       ever be written, these dynamics problems must be resolved.
 void Maze::PopulatePhysicsWorld(PlanarPhysics::Engine* engine) const
 {
     engine->Clear();
