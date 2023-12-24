@@ -50,12 +50,12 @@ void DrawHelper::SetOrthographicProjection(float left, float right, float bottom
     this->projectionMatrix[15] = 1.0f;
 }
 
-void DrawHelper::BeginRender(PlanarPhysics::Engine* engine)
+void DrawHelper::BeginRender(PlanarPhysics::Engine* engine, double aspectRatio)
 {
-    // The world-box aspect ratio should already match that of the screen.
     const BoundingBox& worldBox = engine->GetWorldBox();
-
-    this->SetOrthographicProjection(worldBox.min.x, worldBox.max.x, worldBox.min.y, worldBox.max.y, -1.0, 1.0);
+    BoundingBox viewBox(worldBox);
+    viewBox.MatchAspectRatio(aspectRatio, BoundingBox::MatchMethod::EXPAND);
+    this->SetOrthographicProjection(viewBox.min.x, viewBox.max.x, viewBox.min.y, viewBox.max.y, -1.0, 1.0);
 
     this->lineVertexBuffer.clear();
 }

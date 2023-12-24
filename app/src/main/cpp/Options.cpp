@@ -12,7 +12,7 @@ using namespace ParseParty;
 
 Options::Options()
 {
-    this->gravity = 98.0;
+    this->gravity = 980.0;
     this->bounce = 0.5;
 }
 

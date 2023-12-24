@@ -16,10 +16,8 @@ using namespace PlanarPhysics;
 
 Maze::Maze()
 {
-    this->widthCM = 0.0;
-    this->heightCM = 0.0;
-    this->cellWidthCM = 0.0;
-    this->cellHeightCM = 0.0;
+    this->rows = 0;
+    this->cols = 0;
 }
 
 /*virtual*/ Maze::~Maze()
@@ -27,27 +25,12 @@ Maze::Maze()
     this->Clear();
 }
 
-bool Maze::Generate(double widthCM, double heightCM, double densityCellsPerCM)
+bool Maze::Generate(int rows, int cols)
 {
     this->Clear();
 
-    // TODO: We should not care about width and height here.  Our cell width/height
-    //       should always be the same so as to lend ourselves to the tolerance
-    //       callibration of the physics engine.  We can always draw the maze at
-    //       whatever scale we want, but the physics world should always be as big
-    //       or small as we need it to be in order to conform with the physics tuning.
-
-    this->widthCM = widthCM;
-    this->heightCM = heightCM;
-
-    int rows = ::round(heightCM * densityCellsPerCM);
-    int cols = ::round(widthCM * densityCellsPerCM);
-
-    if(rows <= 0 || cols <= 0)
-        return false;
-
-    this->cellWidthCM = this->widthCM / double(cols);
-    this->cellHeightCM = this->heightCM / double(rows);
+    this->rows = rows;
+    this->cols = cols;
 
     Node*** matrix = new Node**[rows];
     for(int i = 0; i < rows; i++)
@@ -82,8 +65,8 @@ bool Maze::Generate(double widthCM, double heightCM, double densityCellsPerCM)
         for(int j = 0; j < cols; j++)
         {
             Node* node = matrix[i][j];
-            node->center.x = double(j) * this->cellWidthCM + this->cellWidthCM / 2.0;
-            node->center.y = double(i) * this->cellHeightCM + this->cellHeightCM / 2.0;
+            node->center.x = double(j) * MAZE_CELL_SIZE + MAZE_CELL_SIZE / 2.0;
+            node->center.y = double(i) * MAZE_CELL_SIZE + MAZE_CELL_SIZE / 2.0;
         }
     }
 
@@ -187,39 +170,45 @@ void Maze::PopulatePhysicsWorld(PlanarPhysics::Engine* engine) const
 
     PlanarPhysics::BoundingBox mazeBox;
     mazeBox.min = Vector2D(0.0, 0.0);
-    mazeBox.max = Vector2D(this->widthCM, this->heightCM);
+    mazeBox.max = Vector2D(0.0, 0.0);
+    for(const Node* node : this->nodeArray)
+    {
+        mazeBox.ExpandToIncludePoint(node->center + Vector2D(MAZE_CELL_SIZE / 2.0, MAZE_CELL_SIZE / 2.0));
+        mazeBox.ExpandToIncludePoint(node->center - Vector2D(MAZE_CELL_SIZE / 2.0, MAZE_CELL_SIZE / 2.0));
+    }
 
-    PlanarPhysics::BoundingBox worldBox(mazeBox);
-    worldBox.min.y -= 5.0;
-    worldBox.max.y += 5.0;
-    worldBox.MatchAspectRatio(mazeBox.AspectRatio(), BoundingBox::MatchMethod::EXPAND);
-    engine->SetWorldBox(worldBox);
+    mazeBox.min.x -= 5.0;
+    mazeBox.max.x += 5.0;
+    mazeBox.min.y -= 5.0;
+    mazeBox.max.y += 5.0;
 
-    // TODO: This could be optimized a bit by merging walls that are adjacent and collinear.
+    engine->SetWorldBox(mazeBox);
+
     for(const Node* node : this->nodeArray)
         node->GenerateWalls(engine, this);
 
-    engine->ConsolidateWalls();
+    double mazeWidth = MAZE_CELL_SIZE * this->cols;
+    double mazeHeight = MAZE_CELL_SIZE * this->rows;
 
     MazeWall* mazeWallLeft = engine->AddPlanarObject<MazeWall>();
     mazeWallLeft->lineSeg.vertexA = Vector2D(0.0, 0.0);
-    mazeWallLeft->lineSeg.vertexB = Vector2D(0.0, this->heightCM);
+    mazeWallLeft->lineSeg.vertexB = Vector2D(0.0, mazeHeight);
 
     MazeWall* mazeWallRight = engine->AddPlanarObject<MazeWall>();
-    mazeWallRight->lineSeg.vertexA = Vector2D(this->widthCM, 0.0);
-    mazeWallRight->lineSeg.vertexB = Vector2D(this->widthCM, this->heightCM);
+    mazeWallRight->lineSeg.vertexA = Vector2D(mazeWidth, 0.0);
+    mazeWallRight->lineSeg.vertexB = Vector2D(mazeWidth, mazeHeight);
 
     MazeWall* mazeWallBottom = engine->AddPlanarObject<MazeWall>();
     mazeWallBottom->lineSeg.vertexA = Vector2D(0.0, 0.0);
-    mazeWallBottom->lineSeg.vertexB = Vector2D(this->widthCM, 0.0);
+    mazeWallBottom->lineSeg.vertexB = Vector2D(mazeWidth, 0.0);
 
     MazeWall* mazeWallTop = engine->AddPlanarObject<MazeWall>();
-    mazeWallTop->lineSeg.vertexA = Vector2D(0.0, this->heightCM);
-    mazeWallTop->lineSeg.vertexB = Vector2D(this->widthCM, this->heightCM);
+    mazeWallTop->lineSeg.vertexA = Vector2D(0.0, mazeHeight);
+    mazeWallTop->lineSeg.vertexB = Vector2D(mazeWidth, mazeHeight);
 
     MazeBall* mazeBall = engine->AddPlanarObject<MazeBall>();
     mazeBall->position = this->nodeArray[0]->center;
-    mazeBall->radius = this->cellWidthCM / 3.0;
+    mazeBall->radius = MAZE_CELL_SIZE / 3.0;
     mazeBall->color = Color(0.0, 1.0, 0.0);
     mazeBall->SetFlags(PLNR_OBJ_FLAG_INFLUENCED_BY_GRAVITY);
 
@@ -228,7 +217,7 @@ void Maze::PopulatePhysicsWorld(PlanarPhysics::Engine* engine) const
     mazeBlock->color = Color(1.0, 0.0, 0.0);
     mazeBlock->SetFlags(PLNR_OBJ_FLAG_INFLUENCED_BY_GRAVITY);
 
-    double squareSize = this->cellWidthCM / 6.0;
+    double squareSize = MAZE_CELL_SIZE / 6.0;
     std::vector<Vector2D> pointArray;
     pointArray.push_back(Vector2D(-squareSize, -squareSize));
     pointArray.push_back(Vector2D(-squareSize, squareSize));
@@ -236,6 +225,8 @@ void Maze::PopulatePhysicsWorld(PlanarPhysics::Engine* engine) const
     pointArray.push_back(Vector2D(squareSize, squareSize));
 
     mazeBlock->MakeShape(pointArray, 1.0);
+
+    //engine->ConsolidateWalls();
 }
 
 void Maze::Clear()
@@ -278,13 +269,8 @@ void Maze::Node::GenerateWalls(PlanarPhysics::Engine* engine, const Maze* maze) 
         Vector2D wallCenter = (this->center + adjacentNode->center) / 2.0;
         Vector2D wallNormal = (adjacentNode->center - this->center).Normalized();
         Vector2D wallTangent = wallNormal * PScalar2D(1.0);
-        double wallSize = 0.0;
-        if(::abs(wallNormal.x) > ::abs(wallNormal.y))
-            wallSize = maze->cellHeightCM;
-        else
-            wallSize = maze->cellWidthCM;
 
-        LineSegment wallSegment(wallCenter + wallTangent * wallSize / 2.0, wallCenter - wallTangent * wallSize / 2.0);
+        LineSegment wallSegment(wallCenter + wallTangent * MAZE_CELL_SIZE / 2.0, wallCenter - wallTangent * MAZE_CELL_SIZE / 2.0);
         if(this->WallAlreadyExists(wallSegment, engine))
             continue;
 

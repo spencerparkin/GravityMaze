@@ -16,7 +16,7 @@ public:
     bool Setup(AAssetManager* assetManager);
     bool Shutdown();
 
-    void BeginRender(PlanarPhysics::Engine* engine);
+    void BeginRender(PlanarPhysics::Engine* engine, double aspectRatio);
     void EndRender();
 
     void DrawLine(const PlanarPhysics::Vector2D& pointA, const PlanarPhysics::Vector2D& pointB, const Color& color);

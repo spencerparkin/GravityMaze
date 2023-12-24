@@ -5,6 +5,12 @@
 #include "Math/Utilities/LineSegment.h"
 #include <vector>
 
+// Mazes can very in size in terms of rows and columns, but the cell
+// size should always remain the same so that the physics can work
+// properly as it has been calibrated.  No matter how big or small
+// the maze is, we can always render it to fit the screen.
+#define MAZE_CELL_SIZE       40.0
+
 class Maze
 {
     friend class Node;
@@ -13,7 +19,7 @@ public:
     Maze();
     virtual ~Maze();
 
-    bool Generate(double widthCM, double heightCM, double densityCMPerCell);
+    bool Generate(int rows, int cols);
     void PopulatePhysicsWorld(PlanarPhysics::Engine* engine) const;
     void Clear();
 
@@ -43,8 +49,5 @@ private:
 
     std::vector<Node*> nodeArray;
 
-    double widthCM;
-    double heightCM;
-    double cellWidthCM;
-    double cellHeightCM;
+    int rows, cols;
 };

@@ -254,15 +254,13 @@ void Game::GenerateNextMaze()
 {
     this->maze.Clear();
 
-    ::srand(unsigned(time(nullptr)));
+    //::srand(unsigned(time(nullptr)));
+    ::srand(0);
 
-    double CMPerPixel = 0.0264583333;   // TODO: Get this by querying the device?
-    double widthCM = CMPerPixel * double(this->surfaceWidth);
-    double heightCM = CMPerPixel * double(this->surfaceHeight);
+    int rows = 6;
+    int cols = 3;
 
-    double densityCellsPerCM = 0.4;  // TODO: This is supposed to get denser as the player levels up.
-
-    this->maze.Generate(widthCM, heightCM, densityCellsPerCM);
+    this->maze.Generate(rows, cols);
 
     this->maze.PopulatePhysicsWorld(&this->physicsEngine);
 
@@ -282,7 +280,8 @@ void Game::Render()
 
     glClear(GL_COLOR_BUFFER_BIT);
 
-    this->drawHelper.BeginRender(&this->physicsEngine);
+    double aspectRatio = double(this->surfaceWidth) / double(this->surfaceHeight);
+    this->drawHelper.BeginRender(&this->physicsEngine, aspectRatio);
 
     const std::vector<PlanarObject*>& planarObjectArray = this->physicsEngine.GetPlanarObjectArray();
     for(const PlanarObject* planarObject : planarObjectArray)

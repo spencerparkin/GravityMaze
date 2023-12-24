@@ -26,7 +26,7 @@ class OptionsActivity : AppCompatActivity() {
         pushOptionsToControls()
     }
 
-    private val gravityMax : Float = 300.0f
+    private val gravityMax : Float = 3000.0f
     private val bounceMax : Float = 1.0f
     private fun pushOptionsToControls() {
         val file = File("$filesDir/options.json")
