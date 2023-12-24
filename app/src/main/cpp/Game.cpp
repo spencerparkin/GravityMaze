@@ -6,6 +6,7 @@
 #include <memory>
 #include <vector>
 #include <assert.h>
+#include <filesystem>
 #include "AndroidOut.h"
 
 using namespace PlanarPhysics;
@@ -36,6 +37,12 @@ bool Game::Init()
         return false;
     }
 
+    if(!this->options.Load(this->app))
+    {
+        aout << "Failed to load options!" << std::endl;
+        return false;
+    }
+
     this->sensorManager = ASensorManager_getInstanceForPackage("com.spencer.gravitymaze");
     if(!this->sensorManager)
     {
@@ -60,23 +67,19 @@ bool Game::Init()
                 ASensor_getStringType(sensor) << "/" <<
                 ASensor_getReportingMode(sensor) << "/" <<
                 ASensor_getVendor(sensor) << std::endl;
-
-        int sensorType = ASensor_getType(sensor);
-        if(sensorType == ASENSOR_TYPE_GRAVITY)
-        {
-            this->gravitySensor = sensor;
-        }
     }
 
-    // TODO: Add "<uses-feature android:name="android.hardware.sensor.gyroscope" />" to manifest file in appropriate spot.  Or be able to work with an alternative?
+    // TODO: Add "<uses-feature android:name="android.hardware.sensor.gyroscope" />" to manifest file in appropriate spot.
+    //       Or be able to work with an alternative?
     //       E.g., fall-back on ASENSOR_TYPE_GAME_ROTATION_VECTOR if no gravity sensor found?
+    this->gravitySensor = ASensorManager_getDefaultSensorEx(this->sensorManager, ASENSOR_TYPE_GRAVITY, false);
     if(!this->gravitySensor)
     {
         aout << "No game rotation vector sensor found!" << std::endl;
         return false;
     }
 
-    ALooper* looper = ALooper_forThread();
+    ALooper* looper = ALooper_prepare(ALOOPER_PREPARE_ALLOW_NON_CALLBACKS);
     if(!looper)
     {
         aout << "No looper for current thread?" << std::endl;
@@ -87,6 +90,12 @@ bool Game::Init()
     if(!this->sensorEventQueue)
     {
         aout << "Failed to create sensor event queue!" << std::endl;
+        return false;
+    }
+
+    if(0 != ASensorEventQueue_enableSensor(this->sensorEventQueue, this->gravitySensor))
+    {
+        aout << "Failed to enable gravity sensor!" << std::endl;
         return false;
     }
 
@@ -206,6 +215,9 @@ bool Game::Shutdown()
 
     if(this->sensorEventQueue)
     {
+        if(this->gravitySensor)
+            ASensorEventQueue_disableSensor(this->sensorEventQueue, this->gravitySensor);
+
         ASensorManager_destroyEventQueue(this->sensorManager, this->sensorEventQueue);
         this->sensorEventQueue = nullptr;
     }
@@ -226,8 +238,12 @@ void Game::HandleSensorEvent(void* data)
         {
             case ASENSOR_TYPE_GRAVITY:
             {
-                //Vector2D sensedGravityVector(sensorEvent.vector.x, sensorEvent.vector.y, sensorEvent.vector.z);
-                aout << "Gravity sensed: " << sensorEvent.vector.x << ", " << sensorEvent.vector.y << ", " << sensorEvent.vector.z << std::endl;
+                //aout << "Gravity sensed: " << sensorEvent.vector.x << ", " << sensorEvent.vector.y << ", " << sensorEvent.vector.z << std::endl;
+
+                double gravityAccel = this->options.gravity;
+                this->physicsEngine.accelerationDueToGravity = Vector2D(-sensorEvent.vector.x, -sensorEvent.vector.y).Normalized();
+                this->physicsEngine.accelerationDueToGravity *= gravityAccel * ::sqrt(::abs(1.0 - ::abs(sensorEvent.vector.z / 9.8)));
+
                 break;
             }
         }
@@ -244,11 +260,14 @@ void Game::GenerateNextMaze()
     double widthCM = CMPerPixel * double(this->surfaceWidth);
     double heightCM = CMPerPixel * double(this->surfaceHeight);
 
-    double densityCellsPerCM = 0.1;  // TODO: This is supposed to get denser as the player levels up.
+    double densityCellsPerCM = 0.4;  // TODO: This is supposed to get denser as the player levels up.
 
     this->maze.Generate(widthCM, heightCM, densityCellsPerCM);
 
     this->maze.PopulatePhysicsWorld(&this->physicsEngine);
+
+    this->physicsEngine.accelerationDueToGravity = Vector2D(0.0, -this->options.gravity);
+    this->physicsEngine.SetCoefOfRestForAllCHs(this->options.bounce);
 }
 
 void Game::Tick()

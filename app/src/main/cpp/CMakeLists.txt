@@ -9,12 +9,17 @@ file(GLOB_RECURSE PlanarPhysicsSources CONFIGURE_DEPENDS
         "PlanarPhysics/Engine/Source/*.h"
         "PlanarPhysics/Engine/Source/*.cpp")
 
+file(GLOB_RECURSE ParsePartySources CONFIGURE_DEPENDS
+        "ParseParty/Source/*.h"
+        "ParseParty/Source/*.cpp")
+
 # Creates your game shared library. The name must be the same as the
 # one used for loading in your Kotlin/Java or AndroidManifest.txt files.
 add_library(gravitymaze SHARED
         Main.cpp
         AndroidOut.cpp
         Game.cpp
+        Options.cpp
         Maze.cpp
         Color.cpp
         Shader.cpp
@@ -23,9 +28,13 @@ add_library(gravitymaze SHARED
         MazeObject.cpp
         MazeObjects/MazeBall.cpp
         MazeObjects/MazeWall.cpp
-        ${PlanarPhysicsSources})
+        MazeObjects/MazeBlock.cpp
+        ${PlanarPhysicsSources}
+        ${ParsePartySources})
 
-target_include_directories(gravitymaze PRIVATE "PlanarPhysics/Engine/Source")
+target_include_directories(gravitymaze PRIVATE
+        "PlanarPhysics/Engine/Source"
+        "ParseParty/Source")
 
 # Searches for a package provided by the game activity dependency
 find_package(game-activity REQUIRED CONFIG)

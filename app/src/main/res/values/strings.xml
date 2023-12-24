@@ -1,3 +1,9 @@
 <resources>
     <string name="app_name">GravityMaze</string>
+    <string name="saveAndExit">Save and Exit!</string>
+    <string name="gravityLabel">Gravity:</string>
+    <string name="bounceLabel">Bounce:</string>
+    <string name="gameExplanation">Welcome to Gravity Maze, the most a-maze-ing game ever invented for a mobile device!  You are on a quest to save the universe!  Unless you complete all the mazes, the evil queen (who\'s name is not pronouncable by humans) from beyond the outer rim will destroy the universe using the evil magic that exhudes forth from her nostrils.  Can we count on you?</string>
+    <string name="tweakOptions">Tweak the Options, Bro!</string>
+    <string name="resumeGame">Resume Your Quest to Save the Universe!</string>
 </resources>

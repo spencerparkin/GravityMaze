@@ -6,6 +6,7 @@
 #include "Engine.h"
 #include "Maze.h"
 #include "DrawHelper.h"
+#include "Options.h"
 
 struct android_app;
 
@@ -27,6 +28,8 @@ public:
         SENSOR_EVENT_ID = 100
     };
 
+    const Options& GetOptions() const { return this->options; }
+
 private:
 
     android_app* app;
@@ -42,4 +45,5 @@ private:
     ASensorManager* sensorManager;
     const ASensor* gravitySensor;
     ASensorEventQueue* sensorEventQueue;
+    Options options;
 };
