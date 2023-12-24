@@ -1,6 +1,8 @@
 #include "MazeWall.h"
 #include "../DrawHelper.h"
 
+using namespace PlanarPhysics;
+
 MazeWall::MazeWall()
 {
 }
@@ -10,6 +12,11 @@ MazeWall::MazeWall()
 }
 
 /*static*/ MazeWall* MazeWall::Create()
+{
+    return new MazeWall();
+}
+
+/*virtual*/ PlanarObject* MazeWall::CreateNew() const
 {
     return new MazeWall();
 }

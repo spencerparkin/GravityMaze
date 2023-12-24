@@ -226,7 +226,7 @@ void Maze::PopulatePhysicsWorld(PlanarPhysics::Engine* engine) const
 
     mazeBlock->MakeShape(pointArray, 1.0);
 
-    //engine->ConsolidateWalls();
+    engine->ConsolidateWalls();
 }
 
 void Maze::Clear()

@@ -16,6 +16,11 @@ MazeBlock::MazeBlock()
     return new MazeBlock();
 }
 
+/*virtual*/ PlanarObject* MazeBlock::CreateNew() const
+{
+    return new MazeBlock();
+}
+
 /*virtual*/ void MazeBlock::Render(DrawHelper& drawHelper) const
 {
     const ConvexPolygon& polygon = this->GetWorldPolygon();

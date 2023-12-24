@@ -1,6 +1,8 @@
 #include "MazeBall.h"
 #include "../DrawHelper.h"
 
+using namespace PlanarPhysics;
+
 MazeBall::MazeBall()
 {
 }
@@ -10,6 +12,11 @@ MazeBall::MazeBall()
 }
 
 /*static*/ MazeBall* MazeBall::Create()
+{
+    return new MazeBall();
+}
+
+/*virtual*/ PlanarObject* MazeBall::CreateNew() const
 {
     return new MazeBall();
 }

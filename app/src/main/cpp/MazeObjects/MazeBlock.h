@@ -11,5 +11,6 @@ public:
 
     static MazeBlock* Create();
 
+    virtual PlanarObject* CreateNew() const override;
     virtual void Render(DrawHelper& drawHelper) const override;
 };
