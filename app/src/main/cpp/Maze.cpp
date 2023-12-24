@@ -199,6 +199,8 @@ void Maze::PopulatePhysicsWorld(PlanarPhysics::Engine* engine) const
     for(const Node* node : this->nodeArray)
         node->GenerateWalls(engine, this);
 
+    engine->ConsolidateWalls();
+
     MazeWall* mazeWallLeft = engine->AddPlanarObject<MazeWall>();
     mazeWallLeft->lineSeg.vertexA = Vector2D(0.0, 0.0);
     mazeWallLeft->lineSeg.vertexB = Vector2D(0.0, this->heightCM);
