@@ -1,6 +1,9 @@
 #include "Game.h"
 #include "MazeObject.h"
 #include "Math/GeometricAlgebra/Vector2D.h"
+#include "PlanarObjects/Wall.h"
+#include "PlanarObjects/Ball.h"
+#include "PlanarObjects/RigidBody.h"
 #include <game-activity/native_app_glue/android_native_app_glue.h>
 #include <GLES3/gl3.h>
 #include <memory>
@@ -265,7 +268,9 @@ void Game::GenerateNextMaze()
     this->maze.PopulatePhysicsWorld(&this->physicsEngine);
 
     this->physicsEngine.accelerationDueToGravity = Vector2D(0.0, -this->options.gravity);
-    this->physicsEngine.SetCoefOfRestForAllCHs(this->options.bounce);
+    this->physicsEngine.SetCoefOfRest<Wall, Ball>(this->options.bounce);
+    this->physicsEngine.SetCoefOfRest<Wall, RigidBody>(0.5);
+    this->physicsEngine.SetCoefOfRest<Ball, RigidBody>(this->options.bounce);
 }
 
 void Game::Tick()
