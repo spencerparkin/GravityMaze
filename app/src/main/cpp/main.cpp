@@ -54,8 +54,45 @@ void android_main(struct android_app* app)
 
     app->onAppCmd = HandleCommand;
 
+    clock_t timeA = 0;
+    std::list<double> frameTimeFifo;
+    long frameCount = 0;
+
     do
     {
+        frameCount++;
+        clock_t timeB = ::clock();
+        if(timeA != 0L)
+        {
+            double elapsedTimeSeconds = double(timeB - timeA) / double(CLOCKS_PER_SEC);
+            frameTimeFifo.push_back(elapsedTimeSeconds);
+            while(frameTimeFifo.size() > 100)
+                frameTimeFifo.erase(frameTimeFifo.begin());
+        }
+        timeA = timeB;
+
+        if(frameCount % 50 == 0)
+        {
+            double minTimeSeconds = std::numeric_limits<double>::max();
+            double maxTimeSeconds = std::numeric_limits<double>::min();
+            double totalTimeSeconds = 0.0;
+            for(double elapsedTimeSeconds : frameTimeFifo)
+            {
+                totalTimeSeconds += elapsedTimeSeconds;
+                if(minTimeSeconds > elapsedTimeSeconds)
+                    minTimeSeconds = elapsedTimeSeconds;
+                if(maxTimeSeconds < elapsedTimeSeconds)
+                    maxTimeSeconds = elapsedTimeSeconds;
+            }
+            double averageFPS = double(frameTimeFifo.size()) / totalTimeSeconds;
+            double minFPS = 1.0 / maxTimeSeconds;
+            double maxFPS = 1.0 / minTimeSeconds;
+            aout << "=======================================" << std::endl;
+            aout << "Average FPS: " << averageFPS << std::endl;
+            aout << "    Min FPS: " << minFPS << std::endl;
+            aout << "    Max FPS: " << maxFPS << std::endl;
+        }
+
         Game* game = nullptr;
 
         if (app->userData)

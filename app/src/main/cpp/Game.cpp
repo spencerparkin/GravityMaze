@@ -260,8 +260,8 @@ void Game::GenerateNextMaze()
     //::srand(unsigned(time(nullptr)));
     ::srand(0);
 
-    int rows = 6;
-    int cols = 3;
+    int rows = 50;
+    int cols = 20;
 
     this->maze.Generate(rows, cols);
 
@@ -275,6 +275,15 @@ void Game::GenerateNextMaze()
 
 void Game::Tick()
 {
+    // TODO: After profiling our frame-rate, and testing with the following line
+    //       enabled and disabled, I have identified it as the culprit for periodic
+    //       dips in the frame-rate.  More profiling should be done to pin-point
+    //       exactly where in the physics tick we are slowing down.  It's probably
+    //       in the collision handling, but we need more information.  Is the slow-
+    //       down in the broad-phase handling, or the narrow-phase?  Does the lambda
+    //       stuff have an impact?  This is all somewhat reproducable on PC, by the
+    //       way, because a debug build runs really slow, but a release build seems
+    //       reasonably fast, but I have never understood exactly why that is the case.
     this->physicsEngine.Tick();
 }
 
