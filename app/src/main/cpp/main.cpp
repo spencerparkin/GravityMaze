@@ -63,7 +63,7 @@ void android_main(struct android_app* app)
 
         void* data = nullptr;
         int events = 0;
-        int id = ALooper_pollAll(0, nullptr, &events, &data);
+        int id = ALooper_pollOnce(0, nullptr, &events, &data);
         if (id >= 0)
         {
             switch(id)

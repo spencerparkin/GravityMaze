@@ -235,7 +235,7 @@ bool Game::Shutdown()
 void Game::HandleSensorEvent(void* data)
 {
     ASensorEvent sensorEvent;
-    while(ASensorEventQueue_getEvents(this->sensorEventQueue, &sensorEvent, 1) > 0)
+    if(ASensorEventQueue_getEvents(this->sensorEventQueue, &sensorEvent, 1) > 0)
     {
         switch(sensorEvent.type)
         {
