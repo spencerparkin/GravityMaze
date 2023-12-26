@@ -19,7 +19,6 @@ public:
     bool Init();
     bool Shutdown();
     void Render();
-    void GenerateNextMaze();
     void Tick();
     void HandleSensorEvent(void* data);
 
@@ -30,8 +29,74 @@ public:
 
     const Options& GetOptions() const { return this->options; }
 
+    class State
+    {
+    public:
+        State(Game* game);
+        virtual ~State();
+
+        virtual void Enter();
+        virtual void Leave();
+        virtual State* Tick(double deltaTime);
+        virtual double GetTransitionAlpha() const;
+
+        Game* game;
+    };
+
+    class GenerateMazeState : public State
+    {
+    public:
+        GenerateMazeState(Game* game);
+        virtual ~GenerateMazeState();
+
+        virtual void Enter() override;
+        virtual void Leave() override;
+        virtual State* Tick(double deltaTime) override;
+    };
+
+    class FlyMazeInState : public State
+    {
+    public:
+        FlyMazeInState(Game* game);
+        virtual ~FlyMazeInState();
+
+        virtual void Enter() override;
+        virtual void Leave() override;
+        virtual State* Tick(double deltaTime) override;
+        virtual double GetTransitionAlpha() const override;
+
+        double animRate;
+        double transitionAlpha;
+    };
+
+    class FlyMazeOutState : public State
+    {
+    public:
+        FlyMazeOutState(Game* game);
+        virtual ~FlyMazeOutState();
+
+        virtual void Enter() override;
+        virtual void Leave() override;
+        virtual State* Tick(double deltaTime) override;
+        virtual double GetTransitionAlpha() const override;
+    };
+
+    class PlayGameState : public State
+    {
+    public:
+        PlayGameState(Game* game);
+        virtual ~PlayGameState();
+
+        virtual void Enter() override;
+        virtual void Leave() override;
+        virtual State* Tick(double deltaTime) override;
+    };
+
 private:
 
+    void SetState(State* newState);
+
+    State* state;
     android_app* app;
     bool initialized;
     EGLDisplay display;

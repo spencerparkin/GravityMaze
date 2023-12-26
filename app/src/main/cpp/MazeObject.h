@@ -16,5 +16,6 @@ public:
     void CalcRenderTransform(PlanarPhysics::Transform& renderTransform, double transitionAlpha) const;
 
     Color color;
-    PlanarPhysics::Transform transitionTransform;
+    PlanarPhysics::Transform sourceTransform;
+    PlanarPhysics::Transform targetTransform;
 };

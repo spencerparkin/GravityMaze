@@ -4,6 +4,8 @@ using namespace PlanarPhysics;
 
 MazeObject::MazeObject()
 {
+    this->sourceTransform.Identity();
+    this->targetTransform.Identity();
 }
 
 /*virtual*/ MazeObject::~MazeObject()
@@ -16,6 +18,5 @@ MazeObject::MazeObject()
 
 void MazeObject::CalcRenderTransform(PlanarPhysics::Transform& renderTransform, double transitionAlpha) const
 {
-    Transform identityTransform;
-    renderTransform.Interpolate(this->transitionTransform, identityTransform, transitionAlpha);
+    renderTransform.Interpolate(this->sourceTransform, this->targetTransform, transitionAlpha);
 }

@@ -1,6 +1,7 @@
 #include "Game.h"
 #include "MazeObject.h"
 #include "Math/GeometricAlgebra/Vector2D.h"
+#include "Math/Utilities/Random.h"
 #include "PlanarObjects/Wall.h"
 #include "PlanarObjects/Ball.h"
 #include "PlanarObjects/RigidBody.h"
@@ -14,6 +15,8 @@
 
 using namespace PlanarPhysics;
 
+//------------------------------ Game ------------------------------
+
 Game::Game(android_app* app)
 {
     this->initialized = false;
@@ -26,10 +29,12 @@ Game::Game(android_app* app)
     this->sensorManager = nullptr;
     this->gravitySensor = nullptr;
     this->sensorEventQueue = nullptr;
+    this->state = nullptr;
 }
 
 /*virtual*/ Game::~Game()
 {
+    delete this->state;
 }
 
 bool Game::Init()
@@ -185,12 +190,16 @@ bool Game::Init()
         return false;
     }
 
+    this->SetState(new GenerateMazeState(this));
+
     this->initialized = true;
     return true;
 }
 
 bool Game::Shutdown()
 {
+    this->SetState(nullptr);
+
     this->drawHelper.Shutdown();
 
     if (this->display != EGL_NO_DISPLAY)
@@ -253,26 +262,6 @@ void Game::HandleSensorEvent(void* data)
     }
 }
 
-void Game::GenerateNextMaze()
-{
-    this->maze.Clear();
-
-    //::srand(unsigned(time(nullptr)));
-    ::srand(0);
-
-    int rows = 50;
-    int cols = 20;
-
-    this->maze.Generate(rows, cols);
-
-    this->maze.PopulatePhysicsWorld(&this->physicsEngine);
-
-    this->physicsEngine.accelerationDueToGravity = Vector2D(0.0, -this->options.gravity);
-    this->physicsEngine.SetCoefOfRest<Wall, Ball>(this->options.bounce);
-    this->physicsEngine.SetCoefOfRest<Wall, RigidBody>(0.5);
-    this->physicsEngine.SetCoefOfRest<Ball, RigidBody>(this->options.bounce);
-}
-
 void Game::Tick()
 {
     // TODO: After profiling our frame-rate, and testing with the following line
@@ -284,7 +273,28 @@ void Game::Tick()
     //       stuff have an impact?  This is all somewhat reproducable on PC, by the
     //       way, because a debug build runs really slow, but a release build seems
     //       reasonably fast, but I have never understood exactly why that is the case.
-    this->physicsEngine.Tick();
+    double deltaTime = this->physicsEngine.Tick();
+
+    if(this->state)
+    {
+        State* newState = this->state->Tick(deltaTime);
+        if(newState != this->state)
+            this->SetState(newState);
+    }
+}
+
+void Game::SetState(State* newState)
+{
+    if(this->state)
+    {
+        this->state->Leave();
+        delete this->state;
+    }
+
+    this->state = newState;
+
+    if(this->state)
+        this->state->Enter();
 }
 
 void Game::Render()
@@ -294,7 +304,7 @@ void Game::Render()
 
     glClear(GL_COLOR_BUFFER_BIT);
 
-    double transitionAlpha = 1.0;
+    double transitionAlpha = this->state ? this->state->GetTransitionAlpha() : 0.0;
 
     double aspectRatio = double(this->surfaceWidth) / double(this->surfaceHeight);
     this->drawHelper.BeginRender(&this->physicsEngine, aspectRatio);
@@ -313,4 +323,200 @@ void Game::Render()
 
     auto swapResult = eglSwapBuffers(this->display, this->surface);
     assert(swapResult == EGL_TRUE);
+}
+
+//------------------------------ Game::State ------------------------------
+
+Game::State::State(Game* game)
+{
+    this->game = game;
+}
+
+/*virtual*/ Game::State::~State()
+{
+}
+
+/*virtual*/ void Game::State::Enter()
+{
+}
+
+/*virtual*/ void Game::State::Leave()
+{
+}
+
+/*virtual*/ Game::State* Game::State::Tick(double deltaTime)
+{
+    return this;
+}
+
+/*virtual*/ double Game::State::GetTransitionAlpha() const
+{
+    return 1.0;
+}
+
+//------------------------------ Game::GenerateMazeState ------------------------------
+
+Game::GenerateMazeState::GenerateMazeState(Game* game) : State(game)
+{
+}
+
+/*virtual*/ Game::GenerateMazeState::~GenerateMazeState()
+{
+}
+
+/*virtual*/ void Game::GenerateMazeState::Enter()
+{
+    Maze& maze = this->game->maze;
+    Engine& physicsEngine = this->game->physicsEngine;
+    Options& options = this->game->options;
+
+    maze.Clear();
+
+    //::srand(unsigned(time(nullptr)));
+    ::srand(0);
+
+    // TODO: Need to determine things like this based on the current "level".
+    int rows = 50;
+    int cols = 20;
+
+    maze.Generate(rows, cols);
+
+    maze.PopulatePhysicsWorld(&physicsEngine);
+
+    physicsEngine.accelerationDueToGravity = Vector2D(0.0, -options.gravity);
+    physicsEngine.SetCoefOfRest<Wall, Ball>(options.bounce);
+    physicsEngine.SetCoefOfRest<Wall, RigidBody>(0.5);
+    physicsEngine.SetCoefOfRest<Ball, RigidBody>(options.bounce);
+}
+
+/*virtual*/ void Game::GenerateMazeState::Leave()
+{
+}
+
+/*virtual*/ Game::State* Game::GenerateMazeState::Tick(double deltaTime)
+{
+    return new FlyMazeInState(this->game);
+}
+
+//------------------------------ Game::FlyMazeInState ------------------------------
+
+Game::FlyMazeInState::FlyMazeInState(Game* game) : State(game)
+{
+    this->animRate = 0.5;
+    this->transitionAlpha = 0.0;
+}
+
+/*virtual*/ Game::FlyMazeInState::~FlyMazeInState()
+{
+}
+
+/*virtual*/ void Game::FlyMazeInState::Enter()
+{
+    Engine& physicsEngine = this->game->physicsEngine;
+
+    const BoundingBox& worldBox = physicsEngine.GetWorldBox();
+
+    Vector2D verticalTranslation(0.0, worldBox.Height());
+    Vector2D horizontalTranslation(worldBox.Width(), 0.0);
+    Vector2D diagATranslation(worldBox.Width(), worldBox.Height());
+    Vector2D diagBTranslation(worldBox.Width(), -worldBox.Height());
+
+    std::vector<BoundingBox> outerWorldBoxArray;
+    outerWorldBoxArray.push_back(worldBox.Translated(verticalTranslation));
+    outerWorldBoxArray.push_back(worldBox.Translated(-verticalTranslation));
+    outerWorldBoxArray.push_back(worldBox.Translated(horizontalTranslation));
+    outerWorldBoxArray.push_back(worldBox.Translated(-horizontalTranslation));
+    outerWorldBoxArray.push_back(worldBox.Translated(diagATranslation));
+    outerWorldBoxArray.push_back(worldBox.Translated(-diagATranslation));
+    outerWorldBoxArray.push_back(worldBox.Translated(diagBTranslation));
+    outerWorldBoxArray.push_back(worldBox.Translated(-diagBTranslation));
+
+    const std::vector<PlanarObject*>& planarObjectArray = physicsEngine.GetPlanarObjectArray();
+
+    for(PlanarObject* planarObject : planarObjectArray)
+    {
+        MazeObject* mazeObject = dynamic_cast<MazeObject*>(planarObject);
+        if(mazeObject)
+        {
+            int i = Random::Integer(0, outerWorldBoxArray.size() - 1);
+            double angle = Random::Number(0.0, 2.0 * PLNR_PHY_PI);
+            mazeObject->sourceTransform.Identity();
+            mazeObject->sourceTransform.translation = outerWorldBoxArray[i].RandomPoint();
+            mazeObject->sourceTransform.rotation = PScalar2D(angle).Exponent();
+            mazeObject->targetTransform.Identity();
+        }
+    }
+}
+
+/*virtual*/ void Game::FlyMazeInState::Leave()
+{
+}
+
+/*virtual*/ Game::State* Game::FlyMazeInState::Tick(double deltaTime)
+{
+    this->transitionAlpha += this->animRate * deltaTime;
+    if(this->transitionAlpha > 1.0)
+        return new PlayGameState(this->game);
+
+    return this;
+}
+
+/*virtual*/ double Game::FlyMazeInState::GetTransitionAlpha() const
+{
+    return this->transitionAlpha;
+}
+
+//------------------------------ Game::FlyMazeOutState ------------------------------
+
+Game::FlyMazeOutState::FlyMazeOutState(Game* game) : State(game)
+{
+}
+
+/*virtual*/ Game::FlyMazeOutState::~FlyMazeOutState()
+{
+}
+
+/*virtual*/ void Game::FlyMazeOutState::Enter()
+{
+}
+
+/*virtual*/ void Game::FlyMazeOutState::Leave()
+{
+}
+
+/*virtual*/ Game::State* Game::FlyMazeOutState::Tick(double deltaTime)
+{
+    return this;
+}
+
+/*virtual*/ double Game::FlyMazeOutState::GetTransitionAlpha() const
+{
+    return 1.0;
+}
+
+//------------------------------ Game::PlayGameState ------------------------------
+
+Game::PlayGameState::PlayGameState(Game* game) : State(game)
+{
+}
+
+/*virtual*/ Game::PlayGameState::~PlayGameState()
+{
+}
+
+/*virtual*/ void Game::PlayGameState::Enter()
+{
+}
+
+/*virtual*/ void Game::PlayGameState::Leave()
+{
+}
+
+/*virtual*/ Game::State* Game::PlayGameState::Tick(double deltaTime)
+{
+    // TODO: Once all the target objects have been collided with, the maze is solved,
+    //       at which point, we increment the user's level count and then go to the
+    //       FlyMazeOutState, which, in turn, goes to the GenerateMazeState.
+
+    return this;
 }
