@@ -514,6 +514,10 @@ Game::PlayGameState::PlayGameState(Game* game) : State(game)
 
 /*virtual*/ Game::State* Game::PlayGameState::Tick(double deltaTime)
 {
+    // TODO: Need to add collision events and event handlers in the physics engine stuff.
+    //       Not only can we use this to keep track of all the requirements for completing
+    //       the maze, but we could also play some sound FX when a hit is made.
+
     // TODO: Once all the target objects have been collided with, the maze is solved,
     //       at which point, we increment the user's level count and then go to the
     //       FlyMazeOutState, which, in turn, goes to the GenerateMazeState.
