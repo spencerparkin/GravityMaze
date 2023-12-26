@@ -12,5 +12,5 @@ public:
     static MazeWall* Create();
 
     virtual PlanarObject* CreateNew() const override;
-    virtual void Render(DrawHelper& drawHelper) const override;
+    virtual void Render(DrawHelper& drawHelper, double transitionAlpha) const override;
 };

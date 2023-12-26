@@ -21,7 +21,12 @@ MazeWall::MazeWall()
     return new MazeWall();
 }
 
-/*virtual*/ void MazeWall::Render(DrawHelper& drawHelper) const
+/*virtual*/ void MazeWall::Render(DrawHelper& drawHelper, double transitionAlpha) const
 {
-    drawHelper.DrawLine(this->lineSeg.vertexA, this->lineSeg.vertexB, this->color);
+    Transform renderTransform;
+    this->CalcRenderTransform(renderTransform, transitionAlpha);
+
+    LineSegment renderSegment = renderTransform.TransformLineSegment(this->lineSeg);
+
+    drawHelper.DrawLine(renderSegment.vertexA, renderSegment.vertexB, this->color);
 }

@@ -1,5 +1,6 @@
 #include "MazeBlock.h"
 #include "../DrawHelper.h"
+#include "Math/Utilities/LineSegment.h"
 
 using namespace PlanarPhysics;
 
@@ -21,8 +22,11 @@ MazeBlock::MazeBlock()
     return new MazeBlock();
 }
 
-/*virtual*/ void MazeBlock::Render(DrawHelper& drawHelper) const
+/*virtual*/ void MazeBlock::Render(DrawHelper& drawHelper, double transitionAlpha) const
 {
+    Transform renderTransform;
+    this->CalcRenderTransform(renderTransform, transitionAlpha);
+
     const ConvexPolygon& polygon = this->GetWorldPolygon();
     for(int i = 0; i < polygon.GetVertexCount(); i++)
     {
@@ -31,6 +35,9 @@ MazeBlock::MazeBlock()
         const Vector2D& vertexA = polygon.GetVertexArray()[i];
         const Vector2D& vertexB = polygon.GetVertexArray()[j];
 
-        drawHelper.DrawLine(vertexA, vertexB, this->color);
+        LineSegment lineSeg(vertexA, vertexB);
+        LineSegment renderSeg = renderTransform.TransformLineSegment(lineSeg);
+
+        drawHelper.DrawLine(renderSeg.vertexA, renderSeg.vertexB, this->color);
     }
 }

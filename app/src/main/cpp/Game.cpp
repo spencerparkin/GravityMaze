@@ -294,6 +294,8 @@ void Game::Render()
 
     glClear(GL_COLOR_BUFFER_BIT);
 
+    double transitionAlpha = 1.0;
+
     double aspectRatio = double(this->surfaceWidth) / double(this->surfaceHeight);
     this->drawHelper.BeginRender(&this->physicsEngine, aspectRatio);
 
@@ -303,7 +305,7 @@ void Game::Render()
         auto mazeObject = dynamic_cast<const MazeObject*>(planarObject);
         if(mazeObject)
         {
-            mazeObject->Render(this->drawHelper);
+            mazeObject->Render(this->drawHelper, transitionAlpha);
         }
     }
 

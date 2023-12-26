@@ -21,7 +21,12 @@ MazeBall::MazeBall()
     return new MazeBall();
 }
 
-/*virtual*/ void MazeBall::Render(DrawHelper& drawHelper) const
+/*virtual*/ void MazeBall::Render(DrawHelper& drawHelper, double transitionAlpha) const
 {
-    drawHelper.DrawCircle(this->position, this->radius, this->color);
+    Transform renderTransform;
+    this->CalcRenderTransform(renderTransform, transitionAlpha);
+
+    Vector2D renderPosition = renderTransform.TransformPoint(this->position);
+
+    drawHelper.DrawCircle(renderPosition, this->radius, this->color);
 }
