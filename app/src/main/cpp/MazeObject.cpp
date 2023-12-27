@@ -20,3 +20,8 @@ void MazeObject::CalcRenderTransform(PlanarPhysics::Transform& renderTransform, 
 {
     renderTransform.Interpolate(this->sourceTransform, this->targetTransform, transitionAlpha);
 }
+
+/*virtual*/ Vector2D MazeObject::GetPosition() const
+{
+    return Vector2D(0.0, 0.0);
+}

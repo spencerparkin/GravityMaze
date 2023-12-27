@@ -20,6 +20,7 @@ add_library(gravitymaze SHARED
         AndroidOut.cpp
         Game.cpp
         Options.cpp
+        Progress.cpp
         Maze.cpp
         Color.cpp
         Shader.cpp

@@ -5,6 +5,7 @@
 #include "Engine.h"
 #include "Math/Utilities/BoundingBox.h"
 #include "Math/GeometricAlgebra/PScalar2D.h"
+#include "Math/Utilities/Random.h"
 #include <math.h>
 #include <stdlib.h>
 #include <list>
@@ -114,21 +115,6 @@ bool Maze::Generate(int rows, int cols)
     return true;
 }
 
-int Maze::RandomNumber(int min, int max)
-{
-    double alpha = double(rand()) / double(RAND_MAX);
-    double minFloat = double(min) - 0.5;
-    double maxFloat = double(max) + 0.5;
-    double lerp = minFloat + alpha * (maxFloat - minFloat);
-    double numberFloat = ::round(lerp);
-    int numberInt = (int)numberFloat;
-    if(numberInt < min)
-        numberInt = min;
-    if(numberInt > max)
-        numberInt = max;
-    return numberInt;
-}
-
 Maze::Node* Maze::RandomNode(std::vector<Node*>& nodeArray, int* lastRandom /*= nullptr*/)
 {
     if(lastRandom && *lastRandom >= 0)
@@ -137,7 +123,7 @@ Maze::Node* Maze::RandomNode(std::vector<Node*>& nodeArray, int* lastRandom /*= 
         return nodeArray[*lastRandom];
     }
 
-    int i = this->RandomNumber(0, nodeArray.size() - 1);
+    int i = Random::Integer(0, nodeArray.size() - 1);
     Node* node = nodeArray[i];
 
     if(lastRandom)
@@ -148,7 +134,7 @@ Maze::Node* Maze::RandomNode(std::vector<Node*>& nodeArray, int* lastRandom /*= 
 
 Maze::Node* Maze::RandomNode(std::list<Node*>& nodeList, bool remove)
 {
-    int i = this->RandomNumber(0, nodeList.size() - 1);
+    int i = Random::Integer(0, nodeList.size() - 1);
     std::list<Node*>::iterator iter = nodeList.begin();
     while(i > 0)
     {
@@ -210,21 +196,29 @@ void Maze::PopulatePhysicsWorld(PlanarPhysics::Engine* engine) const
     mazeBall->position = this->nodeArray[0]->center;
     mazeBall->radius = MAZE_CELL_SIZE / 3.0;
     mazeBall->color = Color(0.0, 1.0, 0.0);
-    mazeBall->SetFlags(PLNR_OBJ_FLAG_INFLUENCED_BY_GRAVITY);
+    mazeBall->SetFlags(PLNR_OBJ_FLAG_INFLUENCED_BY_GRAVITY | PLNR_OBJ_FLAG_GEN_COLLISION_EVENTS);
 
-    MazeBlock* mazeBlock = engine->AddPlanarObject<MazeBlock>();
-    mazeBlock->position = this->nodeArray[this->nodeArray.size() - 1]->center;
-    mazeBlock->color = Color(1.0, 0.0, 0.0);
-    mazeBlock->SetFlags(PLNR_OBJ_FLAG_INFLUENCED_BY_GRAVITY);
+    int numMazeBlocks = this->cols - 1;
+    for(int i = 0; i < numMazeBlocks; i++)
+    {
+        MazeBlock* mazeBlock = engine->AddPlanarObject<MazeBlock>();
+        int j = (numMazeBlocks > 1) ? Random::Integer(1, this->nodeArray.size() - 1) : (this->nodeArray.size() - 1);
+        mazeBlock->position = this->nodeArray[j]->center;
+        mazeBlock->color = Color(1.0, 0.0, 0.0);
+        mazeBlock->SetFlags(PLNR_OBJ_FLAG_INFLUENCED_BY_GRAVITY | PLNR_OBJ_FLAG_GEN_COLLISION_EVENTS);
 
-    double squareSize = MAZE_CELL_SIZE / 6.0;
-    std::vector<Vector2D> pointArray;
-    pointArray.push_back(Vector2D(-squareSize, -squareSize));
-    pointArray.push_back(Vector2D(-squareSize, squareSize));
-    pointArray.push_back(Vector2D(squareSize, -squareSize));
-    pointArray.push_back(Vector2D(squareSize, squareSize));
+        std::vector<Vector2D> pointArray;
+        double radius = MAZE_CELL_SIZE / 6.0;
+        int k = Random::Integer(3, 5);
+        for(j = 0; j < k; j++)
+        {
+            double angle = (double(j) / double(k)) * 2.0 * PLNR_PHY_PI;
+            Vector2D vertex(radius * ::cos(angle), radius * ::sin(angle));
+            pointArray.push_back(vertex);
+        }
 
-    mazeBlock->MakeShape(pointArray, 1.0);
+        mazeBlock->MakeShape(pointArray, 1.0);
+    }
 
     engine->ConsolidateWalls();
 }

@@ -13,4 +13,5 @@ public:
 
     virtual PlanarObject* CreateNew() const override;
     virtual void Render(DrawHelper& drawHelper, double transitionAlpha) const override;
+    virtual PlanarPhysics::Vector2D GetPosition() const override;
 };

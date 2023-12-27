@@ -7,6 +7,7 @@
 #include "Maze.h"
 #include "DrawHelper.h"
 #include "Options.h"
+#include "Progress.h"
 
 struct android_app;
 
@@ -79,6 +80,9 @@ public:
         virtual void Leave() override;
         virtual State* Tick(double deltaTime) override;
         virtual double GetTransitionAlpha() const override;
+
+        double animRate;
+        double transitionAlpha;
     };
 
     class PlayGameState : public State
@@ -90,7 +94,12 @@ public:
         virtual void Enter() override;
         virtual void Leave() override;
         virtual State* Tick(double deltaTime) override;
+
+        int mazeBlockCount;
+        int mazeBlockTouchedCount;
     };
+
+    double GetSurfaceAspectRatio() const;
 
 private:
 
@@ -111,4 +120,5 @@ private:
     const ASensor* gravitySensor;
     ASensorEventQueue* sensorEventQueue;
     Options options;
+    Progress progress;
 };

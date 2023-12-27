@@ -43,7 +43,6 @@ private:
         char debugName[128];
     };
 
-    int RandomNumber(int min, int max);
     Node* RandomNode(std::vector<Node*>& nodeArray, int* lastRandom = nullptr);
     Node* RandomNode(std::list<Node*>& nodeList, bool remove);
 

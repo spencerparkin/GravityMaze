@@ -6,6 +6,7 @@ using namespace PlanarPhysics;
 
 MazeBlock::MazeBlock()
 {
+    this->touched = false;
 }
 
 /*virtual*/ MazeBlock::~MazeBlock()
@@ -40,4 +41,9 @@ MazeBlock::MazeBlock()
 
         drawHelper.DrawLine(renderSeg.vertexA, renderSeg.vertexB, this->color);
     }
+}
+
+/*virtual*/ PlanarPhysics::Vector2D MazeBlock::GetPosition() const
+{
+    return this->position;
 }

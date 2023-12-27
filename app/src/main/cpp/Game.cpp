@@ -1,11 +1,14 @@
 #include "Game.h"
 #include "MazeObject.h"
+#include "MazeObjects/MazeBlock.h"
+#include "MazeObjects/MazeBall.h"
 #include "Math/GeometricAlgebra/Vector2D.h"
 #include "Math/Utilities/Random.h"
 #include "PlanarObjects/Wall.h"
 #include "PlanarObjects/Ball.h"
 #include "PlanarObjects/RigidBody.h"
 #include <game-activity/native_app_glue/android_native_app_glue.h>
+#include <android/window.h>
 #include <GLES3/gl3.h>
 #include <memory>
 #include <vector>
@@ -192,6 +195,10 @@ bool Game::Init()
 
     this->SetState(new GenerateMazeState(this));
 
+    // We need to do this, because the game doesn't take any input from swipes or touches.
+    // TODO: Why doesn't this work?  :(
+    GameActivity_setWindowFlags(this->app->activity, AWINDOW_FLAG_KEEP_SCREEN_ON, 0);
+
     this->initialized = true;
     return true;
 }
@@ -239,6 +246,11 @@ bool Game::Shutdown()
 
     this->initialized = false;
     return true;
+}
+
+double Game::GetSurfaceAspectRatio() const
+{
+    return double(this->surfaceWidth) / double(this->surfaceHeight);
 }
 
 void Game::HandleSensorEvent(void* data)
@@ -366,21 +378,25 @@ Game::GenerateMazeState::GenerateMazeState(Game* game) : State(game)
 
 /*virtual*/ void Game::GenerateMazeState::Enter()
 {
+    ::srand(unsigned(time(nullptr)));
+
     Maze& maze = this->game->maze;
     Engine& physicsEngine = this->game->physicsEngine;
     Options& options = this->game->options;
+    Progress& progress = this->game->progress;
 
     maze.Clear();
 
-    //::srand(unsigned(time(nullptr)));
-    ::srand(0);
+    if(!progress.Load(this->game->app))
+        aout << "Failed to load progress!" << std::endl;
 
-    // TODO: Need to determine things like this based on the current "level".
-    int rows = 50;
-    int cols = 20;
+    int level = progress.GetLevel();
+    int rows = level + 5;
+    int cols = (int)::round(double(rows) * this->game->GetSurfaceAspectRatio());
+
+    aout << "Level " << level << " is a maze of size " << rows << " by " << cols << "." << std::endl;
 
     maze.Generate(rows, cols);
-
     maze.PopulatePhysicsWorld(&physicsEngine);
 
     physicsEngine.accelerationDueToGravity = Vector2D(0.0, -options.gravity);
@@ -402,7 +418,7 @@ Game::GenerateMazeState::GenerateMazeState(Game* game) : State(game)
 
 Game::FlyMazeInState::FlyMazeInState(Game* game) : State(game)
 {
-    this->animRate = 0.5;
+    this->animRate = 2.0;
     this->transitionAlpha = 0.0;
 }
 
@@ -412,6 +428,8 @@ Game::FlyMazeInState::FlyMazeInState(Game* game) : State(game)
 
 /*virtual*/ void Game::FlyMazeInState::Enter()
 {
+    this->transitionAlpha = 0.0;
+
     Engine& physicsEngine = this->game->physicsEngine;
 
     const BoundingBox& worldBox = physicsEngine.GetWorldBox();
@@ -432,7 +450,6 @@ Game::FlyMazeInState::FlyMazeInState(Game* game) : State(game)
     outerWorldBoxArray.push_back(worldBox.Translated(-diagBTranslation));
 
     const std::vector<PlanarObject*>& planarObjectArray = physicsEngine.GetPlanarObjectArray();
-
     for(PlanarObject* planarObject : planarObjectArray)
     {
         MazeObject* mazeObject = dynamic_cast<MazeObject*>(planarObject);
@@ -470,6 +487,8 @@ Game::FlyMazeInState::FlyMazeInState(Game* game) : State(game)
 
 Game::FlyMazeOutState::FlyMazeOutState(Game* game) : State(game)
 {
+    this->animRate = 2.0;
+    this->transitionAlpha = 0.0;
 }
 
 /*virtual*/ Game::FlyMazeOutState::~FlyMazeOutState()
@@ -478,6 +497,24 @@ Game::FlyMazeOutState::FlyMazeOutState(Game* game) : State(game)
 
 /*virtual*/ void Game::FlyMazeOutState::Enter()
 {
+    Engine& physicsEngine = this->game->physicsEngine;
+
+    const BoundingBox& worldBox = physicsEngine.GetWorldBox();
+
+    Vector2D center = worldBox.Center();
+
+    const std::vector<PlanarObject*>& planarObjectArray = physicsEngine.GetPlanarObjectArray();
+    for(PlanarObject* planarObject : planarObjectArray)
+    {
+        MazeObject* mazeObject = dynamic_cast<MazeObject*>(planarObject);
+        if(mazeObject)
+        {
+            mazeObject->sourceTransform.Identity();
+            mazeObject->targetTransform.Identity();
+            mazeObject->targetTransform.translation = center - mazeObject->GetPosition();
+            mazeObject->targetTransform.scale = 0.0;
+        }
+    }
 }
 
 /*virtual*/ void Game::FlyMazeOutState::Leave()
@@ -486,18 +523,24 @@ Game::FlyMazeOutState::FlyMazeOutState(Game* game) : State(game)
 
 /*virtual*/ Game::State* Game::FlyMazeOutState::Tick(double deltaTime)
 {
+    this->transitionAlpha += this->animRate * deltaTime;
+    if(this->transitionAlpha > 1.0)
+        return new GenerateMazeState(this->game);
+
     return this;
 }
 
 /*virtual*/ double Game::FlyMazeOutState::GetTransitionAlpha() const
 {
-    return 1.0;
+    return this->transitionAlpha;
 }
 
 //------------------------------ Game::PlayGameState ------------------------------
 
 Game::PlayGameState::PlayGameState(Game* game) : State(game)
 {
+    this->mazeBlockCount = 0;
+    this->mazeBlockTouchedCount = 0;
 }
 
 /*virtual*/ Game::PlayGameState::~PlayGameState()
@@ -506,6 +549,16 @@ Game::PlayGameState::PlayGameState(Game* game) : State(game)
 
 /*virtual*/ void Game::PlayGameState::Enter()
 {
+    this->mazeBlockCount = 0;
+    this->mazeBlockTouchedCount = 0;
+    Engine& physicsEngine = this->game->physicsEngine;
+    const std::vector<PlanarObject*>& planarObjectArray = physicsEngine.GetPlanarObjectArray();
+    for(PlanarObject* planarObject : planarObjectArray)
+    {
+        auto mazeBlock = dynamic_cast<MazeBlock*>(planarObject);
+        if(mazeBlock)
+            this->mazeBlockCount++;
+    }
 }
 
 /*virtual*/ void Game::PlayGameState::Leave()
@@ -514,13 +567,33 @@ Game::PlayGameState::PlayGameState(Game* game) : State(game)
 
 /*virtual*/ Game::State* Game::PlayGameState::Tick(double deltaTime)
 {
-    // TODO: Need to add collision events and event handlers in the physics engine stuff.
-    //       Not only can we use this to keep track of all the requirements for completing
-    //       the maze, but we could also play some sound FX when a hit is made.
+    Engine& physicsEngine = this->game->physicsEngine;
+    Engine::CollisionEvent event;
+    while(physicsEngine.DequeueCollisionEvent(event))
+    {
+        MazeBall* mazeBall = nullptr;
+        MazeBlock* mazeBlock = nullptr;
 
-    // TODO: Once all the target objects have been collided with, the maze is solved,
-    //       at which point, we increment the user's level count and then go to the
-    //       FlyMazeOutState, which, in turn, goes to the GenerateMazeState.
+        if(event.Cast<MazeBall, MazeBlock>(mazeBall, mazeBlock))
+        {
+            if(!mazeBlock->touched)
+            {
+                mazeBlock->touched = true;
+                mazeBlock->color = Color(0.0, 0.0, 1.0);
+                this->mazeBlockTouchedCount++;
+            }
+        }
+    }
+
+    if(this->mazeBlockTouchedCount == this->mazeBlockCount)
+    {
+        this->game->progress.SetLevel(this->game->progress.GetLevel() + 1);
+
+        if(!this->game->progress.Save(this->game->app))
+            aout << "Failed to save progress!" << std::endl;
+
+        return new FlyMazeOutState(this->game);
+    }
 
     return this;
 }

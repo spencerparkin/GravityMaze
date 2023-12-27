@@ -30,3 +30,8 @@ MazeWall::MazeWall()
 
     drawHelper.DrawLine(renderSegment.vertexA, renderSegment.vertexB, this->color);
 }
+
+/*virtual*/ PlanarPhysics::Vector2D MazeWall::GetPosition() const
+{
+    return this->lineSeg.MidPoint();
+}

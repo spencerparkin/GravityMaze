@@ -30,3 +30,8 @@ MazeBall::MazeBall()
 
     drawHelper.DrawCircle(renderPosition, this->radius, this->color);
 }
+
+/*virtual*/ PlanarPhysics::Vector2D MazeBall::GetPosition() const
+{
+    return this->position;
+}
