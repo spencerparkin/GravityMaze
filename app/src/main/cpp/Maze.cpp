@@ -199,10 +199,15 @@ void Maze::PopulatePhysicsWorld(PlanarPhysics::Engine* engine) const
     mazeBall->SetFlags(PLNR_OBJ_FLAG_INFLUENCED_BY_GRAVITY | PLNR_OBJ_FLAG_GEN_COLLISION_EVENTS);
 
     int numMazeBlocks = this->cols - 1;
+    std::unordered_set<int> occupiedCellsSet;
+    occupiedCellsSet.insert(0);
     for(int i = 0; i < numMazeBlocks; i++)
     {
         MazeBlock* mazeBlock = engine->AddPlanarObject<MazeBlock>();
-        int j = (numMazeBlocks > 1) ? Random::Integer(1, this->nodeArray.size() - 1) : (this->nodeArray.size() - 1);
+        int j = 0;
+        while(occupiedCellsSet.find(j) != occupiedCellsSet.end())
+            j = Random::Integer(1, this->nodeArray.size() - 1);
+        occupiedCellsSet.insert(j);
         mazeBlock->position = this->nodeArray[j]->center;
         mazeBlock->color = Color(1.0, 0.0, 0.0);
         mazeBlock->SetFlags(PLNR_OBJ_FLAG_INFLUENCED_BY_GRAVITY | PLNR_OBJ_FLAG_GEN_COLLISION_EVENTS);
