@@ -54,6 +54,11 @@ void DrawHelper::BeginRender(PlanarPhysics::Engine* engine, double aspectRatio)
 {
     const BoundingBox& worldBox = engine->GetWorldBox();
     BoundingBox viewBox(worldBox);
+    double marginSize = 50.0;
+    viewBox.min.x -= marginSize;
+    viewBox.max.x += marginSize;
+    viewBox.min.y -= marginSize;
+    viewBox.max.y += marginSize;
     viewBox.MatchAspectRatio(aspectRatio, BoundingBox::MatchMethod::EXPAND);
     this->SetOrthographicProjection(viewBox.min.x, viewBox.max.x, viewBox.min.y, viewBox.max.y, -1.0, 1.0);
 

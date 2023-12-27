@@ -48,6 +48,10 @@ bool Game::Init()
         return false;
     }
 
+    // We need to do this, because the game doesn't take any input from swipes or touches.
+    // TODO: Why doesn't this work?  :(
+    GameActivity_setWindowFlags(this->app->activity, AWINDOW_FLAG_KEEP_SCREEN_ON, 0);
+
     if(!this->options.Load(this->app))
     {
         aout << "Failed to load options!" << std::endl;
@@ -194,10 +198,6 @@ bool Game::Init()
     }
 
     this->SetState(new GenerateMazeState(this));
-
-    // We need to do this, because the game doesn't take any input from swipes or touches.
-    // TODO: Why doesn't this work?  :(
-    GameActivity_setWindowFlags(this->app->activity, AWINDOW_FLAG_KEEP_SCREEN_ON, 0);
 
     this->initialized = true;
     return true;
