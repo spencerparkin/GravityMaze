@@ -10,6 +10,10 @@ class MainActivity : GameActivity() {
         }
     }
 
+    fun gameActivityFinished() {
+        this.finish()
+    }
+
     override fun onWindowFocusChanged(hasFocus: Boolean) {
         super.onWindowFocusChanged(hasFocus)
         if (hasFocus) {

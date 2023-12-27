@@ -9,6 +9,7 @@
 #include "PlanarObjects/RigidBody.h"
 #include <game-activity/native_app_glue/android_native_app_glue.h>
 #include <android/window.h>
+#include <android/native_activity.h>
 #include <GLES3/gl3.h>
 #include <memory>
 #include <vector>
@@ -292,6 +293,30 @@ void Game::Tick()
         State* newState = this->state->Tick(deltaTime);
         if(newState != this->state)
             this->SetState(newState);
+    }
+
+    android_input_buffer* inputBuffer = android_app_swap_input_buffers(this->app);
+    if (inputBuffer)
+    {
+        for (int i = 0; i < inputBuffer->keyEventsCount; i++)
+        {
+            GameActivityKeyEvent& keyEvent = inputBuffer->keyEvents[i];
+            if(keyEvent.action == AKEY_EVENT_ACTION_UP && keyEvent.keyCode == AKEYCODE_BACK)
+            {
+                JNIEnv* env = nullptr;
+                this->app->activity->vm->AttachCurrentThread(&env, nullptr);
+                if(env)
+                {
+                    jclass clazz = env->GetObjectClass(this->app->activity->javaGameActivity);
+                    jmethodID method = env->GetMethodID(clazz, "gameActivityFinished", "()V");
+                    env->CallVoidMethod(this->app->activity->javaGameActivity, method);
+                    env->DeleteLocalRef(clazz);
+                    this->app->activity->vm->DetachCurrentThread();
+                }
+            }
+        }
+
+        android_app_clear_key_events(inputBuffer);
     }
 }
 

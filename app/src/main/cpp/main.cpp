@@ -52,6 +52,8 @@ void android_main(struct android_app* app)
 
     app->onAppCmd = HandleCommand;
 
+    android_app_set_key_event_filter(app, nullptr);
+
     clock_t timeA = 0;
     std::list<double> frameTimeFifo;
     long frameCount = 0;
