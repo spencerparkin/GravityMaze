@@ -94,9 +94,6 @@ public:
         virtual void Enter() override;
         virtual void Leave() override;
         virtual State* Tick(double deltaTime) override;
-
-        int mazeBlockCount;
-        int mazeBlockTouchedCount;  // TODO: This should be part of our progress data.
     };
 
     double GetSurfaceAspectRatio() const;

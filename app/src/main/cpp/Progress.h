@@ -16,9 +16,13 @@ public:
     int GetLevel() const;
     void SetLevel(int level);
 
+    int GetTouches() const;
+    void SetTouches(int touches);
+
 private:
 
     void GetProgressFilepath(android_app* app, char* progressFilepath, int progressFilepathSize);
 
     int level;
+    int touches;
 };

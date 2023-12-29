@@ -33,6 +33,8 @@ bool Maze::Generate(int rows, int cols)
     this->rows = rows;
     this->cols = cols;
 
+    ::srand(rows * cols * cols);
+
     Node*** matrix = new Node**[rows];
     for(int i = 0; i < rows; i++)
     {
@@ -150,7 +152,7 @@ Maze::Node* Maze::RandomNode(std::list<Node*>& nodeList, bool remove)
     return node;
 }
 
-void Maze::PopulatePhysicsWorld(PlanarPhysics::Engine* engine) const
+void Maze::PopulatePhysicsWorld(PlanarPhysics::Engine* engine, int touches) const
 {
     engine->Clear();
 
@@ -198,30 +200,48 @@ void Maze::PopulatePhysicsWorld(PlanarPhysics::Engine* engine) const
     mazeBall->color = Color(0.0, 1.0, 0.0);
     mazeBall->SetFlags(PLNR_OBJ_FLAG_INFLUENCED_BY_GRAVITY | PLNR_OBJ_FLAG_GEN_COLLISION_EVENTS);
 
-    // TODO: Add some blocks that, if touched, reset all touched blocks!
-    int numMazeBlocks = this->cols - 1;
-    std::unordered_set<int> occupiedCellsSet;
-    occupiedCellsSet.insert(0);
-    for(int i = 0; i < numMazeBlocks; i++)
+    std::vector<int> availableSlots;
+    for(int i = 1; i < this->nodeArray.size(); i++)
+        availableSlots.push_back(i);
+
+    Random::ShuffleArray(availableSlots);
+    int* slot = availableSlots.data();
+
+    int numGoodMazeBlocks = this->cols - 1;
+    for(int i = 0; i < numGoodMazeBlocks; i++)
     {
-        MazeBlock* mazeBlock = engine->AddPlanarObject<MazeBlock>();
-        int j = 0;
-        while(occupiedCellsSet.find(j) != occupiedCellsSet.end())
-            j = Random::Integer(1, this->nodeArray.size() - 1);
-        occupiedCellsSet.insert(j);
-        mazeBlock->position = this->nodeArray[j]->center;
-        mazeBlock->color = Color(1.0, 0.0, 0.0);
+        GoodMazeBlock* mazeBlock = engine->AddPlanarObject<GoodMazeBlock>();
+        mazeBlock->position = this->nodeArray[*slot++]->center;
+        mazeBlock->SetTouched(i < touches);
         mazeBlock->SetFlags(PLNR_OBJ_FLAG_INFLUENCED_BY_GRAVITY | PLNR_OBJ_FLAG_GEN_COLLISION_EVENTS);
 
         std::vector<Vector2D> pointArray;
         double radius = MAZE_CELL_SIZE / 6.0;
         int k = Random::Integer(3, 5);
-        for(j = 0; j < k; j++)
+        for(int j = 0; j < k; j++)
         {
             double angle = (double(j) / double(k)) * 2.0 * PLNR_PHY_PI;
             Vector2D vertex(radius * ::cos(angle), radius * ::sin(angle));
             pointArray.push_back(vertex);
         }
+
+        mazeBlock->MakeShape(pointArray, 1.0);
+    }
+
+    int numEvilMazeBlocks = numGoodMazeBlocks / 4;
+    for(int i = 0; i < numEvilMazeBlocks; i++)
+    {
+        MazeBlock* mazeBlock = engine->AddPlanarObject<EvilMazeBlock>();
+        mazeBlock->position = nodeArray[*slot++]->center;
+        mazeBlock->SetFlags(PLNR_OBJ_FLAG_INFLUENCED_BY_GRAVITY | PLNR_OBJ_FLAG_GEN_COLLISION_EVENTS);
+
+        std::vector<Vector2D> pointArray;
+        double width = MAZE_CELL_SIZE / 5.0;
+        double height = MAZE_CELL_SIZE / 8.0;
+        pointArray.push_back(Vector2D(width, height));
+        pointArray.push_back(Vector2D(-width, height));
+        pointArray.push_back(Vector2D(width, -height));
+        pointArray.push_back(Vector2D(-width, -height));
 
         mazeBlock->MakeShape(pointArray, 1.0);
     }

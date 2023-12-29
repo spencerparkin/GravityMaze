@@ -20,6 +20,7 @@ Progress::Progress()
 void Progress::Reset()
 {
     this->level = 0;
+    this->touches = 0;
 }
 
 bool Progress::Load(android_app* app)
@@ -65,7 +66,15 @@ bool Progress::Load(android_app* app)
         return false;
     }
 
+    JsonInt* jsonTouches = dynamic_cast<JsonInt*>(jsonObject->GetValue("touches"));
+    if(!jsonTouches)
+    {
+        aout << "No touches found in progress object." << std::endl;
+        return false;
+    }
+
     this->level = jsonLevel->GetValue();
+    this->touches = jsonTouches->GetValue();
     return true;
 }
 
@@ -82,6 +91,7 @@ bool Progress::Save(android_app* app)
 
     std::shared_ptr<JsonObject> jsonObject(new JsonObject());
     jsonObject->SetValue("level", new JsonInt(this->level));
+    jsonObject->SetValue("touches", new JsonInt(this->touches));
 
     std::string jsonString;
     if(!jsonObject->PrintJson(jsonString))
@@ -111,4 +121,14 @@ int Progress::GetLevel() const
 void Progress::SetLevel(int level)
 {
     this->level = level;
+}
+
+int Progress::GetTouches() const
+{
+    return this->touches;
+}
+
+void Progress::SetTouches(int touches)
+{
+    this->touches = touches;
 }

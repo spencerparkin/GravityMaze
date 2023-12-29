@@ -403,8 +403,6 @@ Game::GenerateMazeState::GenerateMazeState(Game* game) : State(game)
 
 /*virtual*/ void Game::GenerateMazeState::Enter()
 {
-    ::srand(unsigned(time(nullptr)));
-
     Maze& maze = this->game->maze;
     Engine& physicsEngine = this->game->physicsEngine;
     Options& options = this->game->options;
@@ -422,7 +420,7 @@ Game::GenerateMazeState::GenerateMazeState(Game* game) : State(game)
     aout << "Level " << level << " is a maze of size " << rows << " by " << cols << "." << std::endl;
 
     maze.Generate(rows, cols);
-    maze.PopulatePhysicsWorld(&physicsEngine);
+    maze.PopulatePhysicsWorld(&physicsEngine, progress.GetTouches());
 
     physicsEngine.accelerationDueToGravity = Vector2D(0.0, -options.gravity);
     physicsEngine.SetCoefOfRest<Wall, Ball>(options.bounce);
@@ -564,8 +562,6 @@ Game::FlyMazeOutState::FlyMazeOutState(Game* game) : State(game)
 
 Game::PlayGameState::PlayGameState(Game* game) : State(game)
 {
-    this->mazeBlockCount = 0;
-    this->mazeBlockTouchedCount = 0;
 }
 
 /*virtual*/ Game::PlayGameState::~PlayGameState()
@@ -574,24 +570,16 @@ Game::PlayGameState::PlayGameState(Game* game) : State(game)
 
 /*virtual*/ void Game::PlayGameState::Enter()
 {
-    this->mazeBlockCount = 0;
-    this->mazeBlockTouchedCount = 0;
-    Engine& physicsEngine = this->game->physicsEngine;
-    const std::vector<PlanarObject*>& planarObjectArray = physicsEngine.GetPlanarObjectArray();
-    for(PlanarObject* planarObject : planarObjectArray)
-    {
-        auto mazeBlock = dynamic_cast<MazeBlock*>(planarObject);
-        if(mazeBlock)
-            this->mazeBlockCount++;
-    }
 }
 
 /*virtual*/ void Game::PlayGameState::Leave()
 {
+    this->game->progress.Save(this->game->app);
 }
 
 /*virtual*/ Game::State* Game::PlayGameState::Tick(double deltaTime)
 {
+    bool checkForMazeSolved = false;
     Engine& physicsEngine = this->game->physicsEngine;
     Engine::CollisionEvent event;
     while(physicsEngine.DequeueCollisionEvent(event))
@@ -601,23 +589,28 @@ Game::PlayGameState::PlayGameState(Game* game) : State(game)
 
         if(event.Cast<MazeBall, MazeBlock>(mazeBall, mazeBlock))
         {
-            if(!mazeBlock->touched)
-            {
-                mazeBlock->touched = true;
-                mazeBlock->color = Color(0.0, 0.0, 1.0);
-                this->mazeBlockTouchedCount++;
-            }
+            mazeBlock->UpdateProgressOnTouch(this->game->progress, physicsEngine);
+            checkForMazeSolved = true;
         }
     }
 
-    if(this->mazeBlockTouchedCount == this->mazeBlockCount)
+    if(checkForMazeSolved)
     {
-        this->game->progress.SetLevel(this->game->progress.GetLevel() + 1);
+        int i = 0;
+        const std::vector<PlanarObject*>& planarObjectArray = physicsEngine.GetPlanarObjectArray();
+        for(auto planarObject : planarObjectArray)
+        {
+            auto mazeBlock = dynamic_cast<GoodMazeBlock*>(planarObject);
+            if(mazeBlock)
+                i++;
+        }
 
-        if(!this->game->progress.Save(this->game->app))
-            aout << "Failed to save progress!" << std::endl;
-
-        return new FlyMazeOutState(this->game);
+        if(i == this->game->progress.GetTouches())
+        {
+            this->game->progress.SetLevel(this->game->progress.GetLevel() + 1);
+            this->game->progress.SetTouches(0);
+            return new FlyMazeOutState(this->game);
+        }
     }
 
     return this;

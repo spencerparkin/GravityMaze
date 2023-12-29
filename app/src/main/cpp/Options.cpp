@@ -30,10 +30,9 @@ bool Options::Load(android_app* app)
     {
         fseek(fp, 0, SEEK_END);
         size_t optionsJsonBufSize = ftell(fp);
-        char* optionsJsonBuf = new char[optionsJsonBufSize + 1];
+        char* optionsJsonBuf = new char[optionsJsonBufSize];
         fseek(fp, 0, SEEK_SET);
         fread(optionsJsonBuf, optionsJsonBufSize, 1, fp);
-        optionsJsonBuf[optionsJsonBufSize] = '\0';
         bool optionsLoaded = this->LoadFromString(optionsJsonBuf, optionsJsonBufSize);
         delete[] optionsJsonBuf;
         fclose(fp);
@@ -58,9 +57,14 @@ bool Options::Load(android_app* app)
 
 bool Options::LoadFromString(const char* optionsJsonBuf, int optionsJsonBufSize)
 {
-    std::string optionsJsonStr(optionsJsonBuf);
+    char* safeBuffer = new char[optionsJsonBufSize + 1];
+    ::memcpy(safeBuffer, optionsJsonBuf, optionsJsonBufSize);
+    safeBuffer[optionsJsonBufSize] = '\0';
+    std::string optionsJsonStr(safeBuffer);
+    delete[] safeBuffer;
+
     std::string parseError;
-    std::unique_ptr<JsonValue> jsonData(JsonValue::ParseJson(optionsJsonBuf, parseError));
+    std::unique_ptr<JsonValue> jsonData(JsonValue::ParseJson(optionsJsonStr, parseError));
     if(!jsonData)
     {
         aout << "Failed to parse options file!" << std::endl;
