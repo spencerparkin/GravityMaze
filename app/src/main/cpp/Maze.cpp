@@ -198,6 +198,7 @@ void Maze::PopulatePhysicsWorld(PlanarPhysics::Engine* engine) const
     mazeBall->color = Color(0.0, 1.0, 0.0);
     mazeBall->SetFlags(PLNR_OBJ_FLAG_INFLUENCED_BY_GRAVITY | PLNR_OBJ_FLAG_GEN_COLLISION_EVENTS);
 
+    // TODO: Add some blocks that, if touched, reset all touched blocks!
     int numMazeBlocks = this->cols - 1;
     std::unordered_set<int> occupiedCellsSet;
     occupiedCellsSet.insert(0);
