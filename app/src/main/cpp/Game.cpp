@@ -232,7 +232,7 @@ bool Game::Shutdown()
     }
 
     this->maze.Clear();
-    this->physicsEngine.Clear();
+    this->physicsWorld.Clear();
 
     if(this->sensorEventQueue)
     {
@@ -267,8 +267,8 @@ void Game::HandleSensorEvent(void* data)
                 //aout << "Gravity sensed: " << sensorEvent.vector.x << ", " << sensorEvent.vector.y << ", " << sensorEvent.vector.z << std::endl;
 
                 double gravityAccel = this->options.gravity;
-                this->physicsEngine.accelerationDueToGravity = Vector2D(-sensorEvent.vector.x, -sensorEvent.vector.y).Normalized();
-                this->physicsEngine.accelerationDueToGravity *= gravityAccel * ::sqrt(::abs(1.0 - ::abs(sensorEvent.vector.z / 9.8)));
+                this->physicsWorld.accelerationDueToGravity = Vector2D(-sensorEvent.vector.x, -sensorEvent.vector.y).Normalized();
+                this->physicsWorld.accelerationDueToGravity *= gravityAccel * ::sqrt(::abs(1.0 - ::abs(sensorEvent.vector.z / 9.8)));
 
                 break;
             }
@@ -287,7 +287,7 @@ void Game::Tick()
     //       stuff have an impact?  This is all somewhat reproducable on PC, by the
     //       way, because a debug build runs really slow, but a release build seems
     //       reasonably fast, but I have never understood exactly why that is the case.
-    double deltaTime = this->physicsEngine.Tick();
+    double deltaTime = this->physicsWorld.Tick();
 
     if(this->state)
     {
@@ -354,9 +354,9 @@ void Game::Render()
     double transitionAlpha = this->state ? this->state->GetTransitionAlpha() : 0.0;
 
     double aspectRatio = double(this->surfaceWidth) / double(this->surfaceHeight);
-    this->drawHelper.BeginRender(&this->physicsEngine, aspectRatio);
+    this->drawHelper.BeginRender(&this->physicsWorld, aspectRatio);
 
-    const std::vector<PlanarObject*>& planarObjectArray = this->physicsEngine.GetPlanarObjectArray();
+    const std::vector<PlanarObject*>& planarObjectArray = this->physicsWorld.GetPlanarObjectArray();
     for(const PlanarObject* planarObject : planarObjectArray)
     {
         auto mazeObject = dynamic_cast<const MazeObject*>(planarObject);
@@ -370,7 +370,7 @@ void Game::Render()
     textTransform.scale = (this->progress.GetLevel() < 5) ? (MAZE_CELL_SIZE / 4.0) : (MAZE_CELL_SIZE / 2.0);
     char text[64];
     Color textColor;
-    const BoundingBox& worldBox = this->physicsEngine.GetWorldBox();
+    const BoundingBox& worldBox = this->physicsWorld.GetWorldBox();
 
     textTransform.translation = Vector2D(worldBox.min.x, worldBox.max.y);
     sprintf(text, "Level %d", this->progress.GetLevel());
@@ -430,7 +430,7 @@ Game::GenerateMazeState::GenerateMazeState(Game* game) : State(game)
 /*virtual*/ void Game::GenerateMazeState::Enter()
 {
     Maze& maze = this->game->maze;
-    Engine& physicsEngine = this->game->physicsEngine;
+    Engine& physicsEngine = this->game->physicsWorld;
     Options& options = this->game->options;
     Progress& progress = this->game->progress;
 
@@ -446,12 +446,9 @@ Game::GenerateMazeState::GenerateMazeState(Game* game) : State(game)
     aout << "Level " << level << " is a maze of size " << rows << " by " << cols << "." << std::endl;
 
     maze.Generate(rows, cols);
-    maze.PopulatePhysicsWorld(&physicsEngine, progress.GetTouches());
+    maze.PopulatePhysicsWorld(&physicsEngine, progress.GetTouches(), options.bounce);
 
     physicsEngine.accelerationDueToGravity = Vector2D(0.0, -options.gravity);
-    physicsEngine.SetCoefOfRest<Wall, Ball>(options.bounce);
-    physicsEngine.SetCoefOfRest<Wall, RigidBody>(0.5);
-    physicsEngine.SetCoefOfRest<Ball, RigidBody>(options.bounce);
 }
 
 /*virtual*/ void Game::GenerateMazeState::Leave()
@@ -479,7 +476,7 @@ Game::FlyMazeInState::FlyMazeInState(Game* game) : State(game)
 {
     this->transitionAlpha = 0.0;
 
-    Engine& physicsEngine = this->game->physicsEngine;
+    Engine& physicsEngine = this->game->physicsWorld;
 
     const BoundingBox& worldBox = physicsEngine.GetWorldBox();
 
@@ -546,7 +543,7 @@ Game::FlyMazeOutState::FlyMazeOutState(Game* game) : State(game)
 
 /*virtual*/ void Game::FlyMazeOutState::Enter()
 {
-    Engine& physicsEngine = this->game->physicsEngine;
+    Engine& physicsEngine = this->game->physicsWorld;
 
     const BoundingBox& worldBox = physicsEngine.GetWorldBox();
 
@@ -600,44 +597,62 @@ Game::PlayGameState::PlayGameState(Game* game) : State(game)
 
 /*virtual*/ void Game::PlayGameState::Leave()
 {
+    if(!this->game->physicsWorld.IsMazeSolved())
+        this->game->progress.SetTouches(this->game->physicsWorld.GetGoodMazeBlockTouchedCount());
+    else
+    {
+        this->game->progress.SetLevel(this->game->progress.GetLevel() + 1);
+        this->game->progress.SetTouches(0);
+    }
+
     this->game->progress.Save(this->game->app);
 }
 
 /*virtual*/ Game::State* Game::PlayGameState::Tick(double deltaTime)
 {
-    bool checkForMazeSolved = false;
-    Engine& physicsEngine = this->game->physicsEngine;
-    Engine::CollisionEvent event;
-    while(physicsEngine.DequeueCollisionEvent(event))
-    {
-        MazeBall* mazeBall = nullptr;
-        MazeBlock* mazeBlock = nullptr;
-
-        if(event.Cast<MazeBall, MazeBlock>(mazeBall, mazeBlock))
-        {
-            mazeBlock->UpdateProgressOnTouch(this->game->progress, physicsEngine);
-            checkForMazeSolved = true;
-        }
-    }
-
-    if(checkForMazeSolved)
-    {
-        int i = 0;
-        const std::vector<PlanarObject*>& planarObjectArray = physicsEngine.GetPlanarObjectArray();
-        for(auto planarObject : planarObjectArray)
-        {
-            auto mazeBlock = dynamic_cast<GoodMazeBlock*>(planarObject);
-            if(mazeBlock)
-                i++;
-        }
-
-        if(i == this->game->progress.GetTouches())
-        {
-            this->game->progress.SetLevel(this->game->progress.GetLevel() + 1);
-            this->game->progress.SetTouches(0);
-            return new FlyMazeOutState(this->game);
-        }
-    }
+    if(this->game->physicsWorld.IsMazeSolved())
+        return new FlyMazeOutState(this->game);
 
     return this;
+}
+
+//------------------------------ Game::PhysicsWorld ------------------------------
+
+Game::PhysicsWorld::PhysicsWorld()
+{
+}
+
+/*virtual*/ Game::PhysicsWorld::~PhysicsWorld()
+{
+}
+
+bool Game::PhysicsWorld::IsMazeSolved()
+{
+    // TODO: For the final level, the condition here will be more complicated.
+
+    return this->GetGoodMazeBlockCount() == this->GetGoodMazeBlockTouchedCount();
+}
+
+int Game::PhysicsWorld::GetGoodMazeBlockCount()
+{
+    int count = 0;
+    for(auto planarObject : this->GetPlanarObjectArray())
+        if(dynamic_cast<GoodMazeBlock*>(planarObject))
+            count++;
+
+    return count;
+}
+
+int Game::PhysicsWorld::GetGoodMazeBlockTouchedCount()
+{
+    int count = 0;
+
+    for(auto planarObject : this->GetPlanarObjectArray())
+    {
+        auto goodMazeBlock = dynamic_cast<GoodMazeBlock *>(planarObject);
+        if (goodMazeBlock && goodMazeBlock->IsTouched())
+            count++;
+    }
+
+    return count;
 }

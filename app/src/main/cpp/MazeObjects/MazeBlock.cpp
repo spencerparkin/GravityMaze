@@ -1,4 +1,5 @@
 #include "MazeBlock.h"
+#include "MazeBall.h"
 #include "../DrawHelper.h"
 #include "Math/Utilities/LineSegment.h"
 #include "../Progress.h"
@@ -62,15 +63,6 @@ GoodMazeBlock::GoodMazeBlock()
     return new GoodMazeBlock();
 }
 
-/*virtual*/ void GoodMazeBlock::UpdateProgressOnTouch(Progress& progress, PlanarPhysics::Engine& engine)
-{
-    if(!this->touched)
-    {
-        this->SetTouched(true);
-        progress.SetTouches(progress.GetTouches() + 1);
-    }
-}
-
 void GoodMazeBlock::SetTouched(bool touched)
 {
     this->touched = touched;
@@ -103,17 +95,17 @@ EvilMazeBlock::EvilMazeBlock()
     return new EvilMazeBlock();
 }
 
-/*virtual*/ void EvilMazeBlock::UpdateProgressOnTouch(Progress& progress, PlanarPhysics::Engine& engine)
+/*virtual*/ void EvilMazeBlock::CollisionOccurredWith(PlanarPhysics::PlanarObject* planarObject, PlanarPhysics::Engine* engine)
 {
-    progress.SetTouches(0);
-
-    const std::vector<PlanarObject*>& planarObjectArray = engine.GetPlanarObjectArray();
-    for(PlanarObject* planarObject : planarObjectArray)
+    auto mazeBall = dynamic_cast<MazeBall*>(planarObject);
+    if(mazeBall)
     {
-        auto goodMazeBlock = dynamic_cast<GoodMazeBlock*>(planarObject);
-        if(goodMazeBlock)
+        const std::vector<PlanarObject *> &planarObjectArray = engine->GetPlanarObjectArray();
+        for (PlanarObject *planarObject: planarObjectArray)
         {
-            goodMazeBlock->SetTouched(false);
+            auto goodMazeBlock = dynamic_cast<GoodMazeBlock *>(planarObject);
+            if (goodMazeBlock)
+                goodMazeBlock->SetTouched(false);
         }
     }
 }

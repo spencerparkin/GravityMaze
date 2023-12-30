@@ -2,6 +2,7 @@
 #include "MazeObjects/MazeWall.h"
 #include "MazeObjects/MazeBall.h"
 #include "MazeObjects/MazeBlock.h"
+#include "MazeObjects/MazeWorm.h"
 #include "Engine.h"
 #include "Math/Utilities/BoundingBox.h"
 #include "Math/GeometricAlgebra/PScalar2D.h"
@@ -152,7 +153,7 @@ Maze::Node* Maze::RandomNode(std::list<Node*>& nodeList, bool remove)
     return node;
 }
 
-void Maze::PopulatePhysicsWorld(PlanarPhysics::Engine* engine, int touches) const
+void Maze::PopulatePhysicsWorld(PlanarPhysics::Engine* engine, int touches, double bounceFactor) const
 {
     engine->Clear();
 
@@ -198,7 +199,8 @@ void Maze::PopulatePhysicsWorld(PlanarPhysics::Engine* engine, int touches) cons
     mazeBall->position = this->nodeArray[0]->center;
     mazeBall->radius = MAZE_CELL_SIZE / 3.0;
     mazeBall->color = Color(0.0, 1.0, 0.0);
-    mazeBall->SetFlags(PLNR_OBJ_FLAG_INFLUENCED_BY_GRAVITY | PLNR_OBJ_FLAG_GEN_COLLISION_EVENTS);
+    mazeBall->SetBounceFactor(bounceFactor);
+    mazeBall->SetFlags(PLNR_OBJ_FLAG_INFLUENCED_BY_GRAVITY | PLNR_OBJ_FLAG_CALL_COLLISION_FUNC);
 
     std::vector<int> availableSlots;
     for(int i = 1; i < this->nodeArray.size(); i++)
@@ -213,7 +215,8 @@ void Maze::PopulatePhysicsWorld(PlanarPhysics::Engine* engine, int touches) cons
         GoodMazeBlock* mazeBlock = engine->AddPlanarObject<GoodMazeBlock>();
         mazeBlock->position = this->nodeArray[*slot++]->center;
         mazeBlock->SetTouched(i < touches);
-        mazeBlock->SetFlags(PLNR_OBJ_FLAG_INFLUENCED_BY_GRAVITY | PLNR_OBJ_FLAG_GEN_COLLISION_EVENTS);
+        mazeBlock->SetBounceFactor(0.5);
+        mazeBlock->SetFlags(PLNR_OBJ_FLAG_INFLUENCED_BY_GRAVITY);
 
         std::vector<Vector2D> pointArray;
         double radius = MAZE_CELL_SIZE / 6.0;
@@ -233,7 +236,8 @@ void Maze::PopulatePhysicsWorld(PlanarPhysics::Engine* engine, int touches) cons
     {
         MazeBlock* mazeBlock = engine->AddPlanarObject<EvilMazeBlock>();
         mazeBlock->position = nodeArray[*slot++]->center;
-        mazeBlock->SetFlags(PLNR_OBJ_FLAG_INFLUENCED_BY_GRAVITY | PLNR_OBJ_FLAG_GEN_COLLISION_EVENTS);
+        mazeBlock->SetBounceFactor(0.5);
+        mazeBlock->SetFlags(PLNR_OBJ_FLAG_INFLUENCED_BY_GRAVITY | PLNR_OBJ_FLAG_CALL_COLLISION_FUNC);
 
         std::vector<Vector2D> pointArray;
         double width = MAZE_CELL_SIZE / 5.0;
@@ -244,6 +248,16 @@ void Maze::PopulatePhysicsWorld(PlanarPhysics::Engine* engine, int touches) cons
         pointArray.push_back(Vector2D(-width, -height));
 
         mazeBlock->MakeShape(pointArray, 1.0);
+    }
+
+    if(numGoodMazeBlocks > 10)
+    {
+        MazeWorm* mazeWorm = engine->AddPlanarObject<MazeWorm>();
+        mazeWorm->position = nodeArray[*slot++]->center;
+        mazeWorm->radius = MAZE_CELL_SIZE / 7.0;
+        mazeWorm->SetBounceFactor(1.0);
+        mazeWorm->velocity = Random::Vector(200.0, 250.0);
+        mazeWorm->SetFlags(PLNR_OBJ_FLAG_CALL_COLLISION_FUNC);
     }
 
     engine->ConsolidateWalls();

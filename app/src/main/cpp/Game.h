@@ -99,6 +99,17 @@ public:
 
     double GetSurfaceAspectRatio() const;
 
+    class PhysicsWorld : public PlanarPhysics::Engine
+    {
+    public:
+        PhysicsWorld();
+        virtual ~PhysicsWorld();
+
+        bool IsMazeSolved();
+        int GetGoodMazeBlockCount();
+        int GetGoodMazeBlockTouchedCount();
+    };
+
 private:
 
     void SetState(State* newState);
@@ -111,7 +122,7 @@ private:
     EGLContext context;
     EGLint surfaceWidth;
     EGLint surfaceHeight;
-    PlanarPhysics::Engine physicsEngine;
+    PhysicsWorld physicsWorld;
     Maze maze;
     DrawHelper drawHelper;
     ASensorManager* sensorManager;

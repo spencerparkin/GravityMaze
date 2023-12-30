@@ -1,4 +1,5 @@
 #include "MazeBall.h"
+#include "MazeBlock.h"
 #include "../DrawHelper.h"
 
 using namespace PlanarPhysics;
@@ -34,4 +35,11 @@ MazeBall::MazeBall()
 /*virtual*/ PlanarPhysics::Vector2D MazeBall::GetPosition() const
 {
     return this->position;
+}
+
+/*virtual*/ void MazeBall::CollisionOccurredWith(PlanarPhysics::PlanarObject* planarObject, PlanarPhysics::Engine* engine)
+{
+    auto mazeBlock = dynamic_cast<GoodMazeBlock*>(planarObject);
+    if(mazeBlock)
+        mazeBlock->SetTouched(true);
 }
