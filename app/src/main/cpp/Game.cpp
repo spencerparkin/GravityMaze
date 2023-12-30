@@ -367,7 +367,7 @@ void Game::Render()
     }
 
     Transform textTransform;
-    textTransform.scale = MAZE_CELL_SIZE / 2.0;
+    textTransform.scale = (this->progress.GetLevel() < 5) ? (MAZE_CELL_SIZE / 4.0) : (MAZE_CELL_SIZE / 2.0);
     char text[64];
     Color textColor;
     const BoundingBox& worldBox = this->physicsEngine.GetWorldBox();
@@ -378,8 +378,8 @@ void Game::Render()
     this->textRenderer.RenderText(text, textTransform, textColor, this->drawHelper);
 
     textTransform.translation = Vector2D(worldBox.min.y, worldBox.min.y - textTransform.scale);
-    sprintf(text, "FPS = %f", frameRate);
-    textColor = (frameRate < 60) ? ((frameRate < 30) ? Color(1.0, 0.0, 0.0) : Color(1.0, 0.0, 1.0)) : Color(0.0, 1.0, 0.0);
+    sprintf(text, "FPS = %06.2f", frameRate);
+    textColor = (frameRate < 60) ? ((frameRate < 30) ? Color(1.0, 0.0, 0.0) : Color(1.0, 1.0, 0.0)) : Color(0.0, 1.0, 0.0);
     this->textRenderer.RenderText(text, textTransform, textColor, this->drawHelper);
 
     this->drawHelper.EndRender();
