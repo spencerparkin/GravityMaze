@@ -34,6 +34,7 @@ Game::Game(android_app* app)
     this->gravitySensor = nullptr;
     this->sensorEventQueue = nullptr;
     this->state = nullptr;
+    this->lastTime = 0;
 }
 
 /*virtual*/ Game::~Game()
@@ -339,6 +340,15 @@ void Game::Render()
     if(!this->initialized)
         return;
 
+    clock_t currentTime = ::clock();
+    double frameRate = 0.0;
+    if(this->lastTime != 0)
+    {
+        double elapsedTime = double(currentTime - this->lastTime) / double(CLOCKS_PER_SEC);
+        frameRate = 1.0 / elapsedTime;
+    }
+    this->lastTime = currentTime;
+
     glClear(GL_COLOR_BUFFER_BIT);
 
     double transitionAlpha = this->state ? this->state->GetTransitionAlpha() : 0.0;
@@ -355,6 +365,22 @@ void Game::Render()
             mazeObject->Render(this->drawHelper, transitionAlpha);
         }
     }
+
+    Transform textTransform;
+    textTransform.scale = MAZE_CELL_SIZE / 2.0;
+    char text[64];
+    Color textColor;
+    const BoundingBox& worldBox = this->physicsEngine.GetWorldBox();
+
+    textTransform.translation = Vector2D(worldBox.min.x, worldBox.max.y);
+    sprintf(text, "Level %d", this->progress.GetLevel());
+    textColor = Color(1.0, 1.0, 1.0);
+    this->textRenderer.RenderText(text, textTransform, textColor, this->drawHelper);
+
+    textTransform.translation = Vector2D(worldBox.min.y, worldBox.min.y - textTransform.scale);
+    sprintf(text, "FPS = %f", frameRate);
+    textColor = (frameRate < 60) ? ((frameRate < 30) ? Color(1.0, 0.0, 0.0) : Color(1.0, 0.0, 1.0)) : Color(0.0, 1.0, 0.0);
+    this->textRenderer.RenderText(text, textTransform, textColor, this->drawHelper);
 
     this->drawHelper.EndRender();
 

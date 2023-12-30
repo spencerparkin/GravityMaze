@@ -8,6 +8,7 @@
 #include "DrawHelper.h"
 #include "Options.h"
 #include "Progress.h"
+#include "TextRenderer.h"
 
 struct android_app;
 
@@ -118,4 +119,6 @@ private:
     ASensorEventQueue* sensorEventQueue;
     Options options;
     Progress progress;
+    TextRenderer textRenderer;
+    clock_t lastTime;
 };

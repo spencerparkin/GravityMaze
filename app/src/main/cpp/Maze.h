@@ -11,6 +11,8 @@
 // the maze is, we can always render it to fit the screen.
 #define MAZE_CELL_SIZE       40.0
 
+// TODO: It wouldn't be too hard to make mazes with different geometries; e.g., those
+//       that aren't necessarily rectangular, but, say, honey-comb shapes or circular.
 class Maze
 {
     friend class Node;
