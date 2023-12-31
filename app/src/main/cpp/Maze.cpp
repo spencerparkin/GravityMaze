@@ -266,7 +266,7 @@ void Maze::PopulatePhysicsWorld(PlanarPhysics::Engine* engine, int touches, bool
         MazeQueen *mazeQueen = engine->AddPlanarObject<MazeQueen>();
         mazeQueen->position = nodeArray[*slot++]->center;
         mazeQueen->radius = MAZE_CELL_SIZE / 4.0;
-        mazeQueen->SetBounceFactor(1.0);
+        mazeQueen->SetBounceFactor(0.5);
         mazeQueen->SetFlags(PLNR_OBJ_FLAG_INFLUENCED_BY_GRAVITY | PLNR_OBJ_FLAG_CALL_COLLISION_FUNC);
     }
 
