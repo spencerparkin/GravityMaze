@@ -24,6 +24,7 @@ using namespace PlanarPhysics;
 
 Game::Game(android_app* app)
 {
+    this->debugWinEntireGame = false;
     this->initialized = false;
     this->app = app;
     this->display = EGL_NO_DISPLAY;
@@ -438,10 +439,6 @@ Game::GenerateMazeState::GenerateMazeState(Game* game) : State(game)
     if(!progress.Load(this->game->app))
         aout << "Failed to load progress!" << std::endl;
 
-#if defined DEBUG_END_OF_GAME
-    progress.SetLevel(FINAL_GRAVITY_MAZE_LEVEL);
-#endif
-
     int level = progress.GetLevel();
     int rows = level + 5;
     int cols = (int)::round(double(rows) * this->game->GetSurfaceAspectRatio());
@@ -577,7 +574,7 @@ Game::FlyMazeOutState::FlyMazeOutState(Game* game) : State(game)
     if(this->transitionAlpha > 1.0)
     {
         MazeQueen* mazeQueen = this->game->physicsWorld.FindTheQueen();
-        if(mazeQueen && !mazeQueen->alive)
+        if((mazeQueen && !mazeQueen->alive) || this->game->debugWinEntireGame)
             return new GameWonState(this->game);
 
         return new GenerateMazeState(this->game);
@@ -625,7 +622,7 @@ Game::PlayGameState::PlayGameState(Game* game) : State(game)
 
 /*virtual*/ Game::State* Game::PlayGameState::Tick(double deltaTime)
 {
-    if(this->game->physicsWorld.IsMazeSolved())
+    if(this->game->physicsWorld.IsMazeSolved() || this->game->debugWinEntireGame)
         return new FlyMazeOutState(this->game);
 
     return this;
@@ -643,10 +640,30 @@ Game::GameWonState::GameWonState(Game* game) : State(game)
 
 /*virtual*/ void Game::GameWonState::Enter()
 {
+    Engine& physicsEngine = this->game->physicsWorld;
+
+    const BoundingBox& worldBox = physicsEngine.GetWorldBox();
+
+    const std::vector<PlanarObject*>& planarObjectArray = physicsEngine.GetPlanarObjectArray();
+    for(PlanarObject* planarObject : planarObjectArray)
+    {
+        MazeObject *mazeObject = dynamic_cast<MazeObject *>(planarObject);
+        if (mazeObject)
+        {
+            mazeObject->sourceTransform.Identity();
+            mazeObject->targetTransform.Identity();
+            mazeObject->targetTransform.translation = 2.0 * worldBox.max;   // Move them all off screen.
+        }
+    }
 }
 
 /*virtual*/ void Game::GameWonState::Leave()
 {
+}
+
+/*virtual*/ double Game::GameWonState::GetTransitionAlpha() const
+{
+    return 1.0;
 }
 
 /*virtual*/ Game::State* Game::GameWonState::Tick(double deltaTime)
@@ -656,7 +673,14 @@ Game::GameWonState::GameWonState(Game* game) : State(game)
 
 /*virtual*/ void Game::GameWonState::Render(DrawHelper& drawHelper) const
 {
-    // TODO: Render "you won" on the screen.
+    Engine& physicsEngine = this->game->physicsWorld;
+
+    const BoundingBox& worldBox = physicsEngine.GetWorldBox();
+
+    Transform textToWorld;
+    textToWorld.scale = 80.0;
+    textToWorld.translation = Vector2D(0.0, worldBox.max.y / 2.0);
+    this->game->textRenderer.RenderText("YOU WIN!!!", textToWorld, Color(1.0, 1.0, 1.0), drawHelper);
 
     // TODO: Can the user choose here to add their name to a database of game winners?
     //       Where could I host such a database?  Not for free, certainly, so maybe I won't bother.
@@ -674,11 +698,7 @@ Game::PhysicsWorld::PhysicsWorld()
 
 bool Game::PhysicsWorld::IsMazeSolved()
 {
-#ifdef DEBUG_END_OF_GAME
-    return this->QueenDeadOrNonExistent() && this->FindTheQueen();
-#else
     return this->GetGoodMazeBlockCount() == this->GetGoodMazeBlockTouchedCount() && this->QueenDeadOrNonExistent();
-#endif
 }
 
 int Game::PhysicsWorld::GetGoodMazeBlockCount()

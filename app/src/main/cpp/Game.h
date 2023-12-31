@@ -112,6 +112,7 @@ public:
         virtual void Leave() override;
         virtual State* Tick(double deltaTime) override;
         virtual void Render(DrawHelper& drawHelper) const override;
+        virtual double GetTransitionAlpha() const override;
     };
 
     double GetSurfaceAspectRatio() const;
@@ -151,4 +152,5 @@ private:
     Progress progress;
     TextRenderer textRenderer;
     clock_t lastTime;
+    bool debugWinEntireGame;    // This variable is only meant to be changed by an attached debugger.
 };
