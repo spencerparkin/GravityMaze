@@ -43,6 +43,7 @@ Game::Game(android_app* app)
     delete this->state;
 }
 
+// TODO: Add sound FX.
 bool Game::Init()
 {
     if(this->initialized)
