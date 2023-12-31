@@ -207,6 +207,12 @@ bool Game::Init()
         return false;
     }
 
+    if(this->options.audio && !this->audioSubSystem.Setup())
+    {
+        aout << "Failed to initialize the audio sub-system." << std::endl;
+        return false;
+    }
+
     this->SetState(new GenerateMazeState(this));
 
     this->initialized = true;
@@ -253,6 +259,8 @@ bool Game::Shutdown()
 
     this->sensorManager = nullptr;
     this->gravitySensor = nullptr;
+
+    this->audioSubSystem.Shutdown();
 
     this->initialized = false;
     return true;

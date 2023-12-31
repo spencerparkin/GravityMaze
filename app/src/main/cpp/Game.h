@@ -3,6 +3,7 @@
 #include <EGL/egl.h>
 #include <memory>
 #include <android/sensor.h>
+#include "AudioSubSystem.h"
 #include "Engine.h"
 #include "Maze.h"
 #include "DrawHelper.h"
@@ -151,6 +152,7 @@ private:
     Options options;
     Progress progress;
     TextRenderer textRenderer;
+    AudioSubSystem audioSubSystem;
     clock_t lastTime;
     bool debugWinEntireGame;    // This variable is only meant to be changed by an attached debugger.
 };

@@ -1,4 +1,5 @@
 {
   "gravity": 980.0,
-  "bounce": 0.5
+  "bounce": 0.5,
+  "audio": true
 }

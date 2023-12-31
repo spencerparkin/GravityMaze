@@ -5,6 +5,8 @@ cmake_minimum_required(VERSION 3.22.1)
 
 project("gravitymaze")
 
+add_subdirectory(oboe)
+
 file(GLOB_RECURSE PlanarPhysicsSources CONFIGURE_DEPENDS
         "PlanarPhysics/Engine/Source/*.h"
         "PlanarPhysics/Engine/Source/*.cpp")
@@ -18,6 +20,7 @@ file(GLOB_RECURSE ParsePartySources CONFIGURE_DEPENDS
 add_library(gravitymaze SHARED
         Main.cpp
         AndroidOut.cpp
+        AudioSubSystem.cpp
         Game.cpp
         Options.cpp
         Progress.cpp
@@ -38,7 +41,8 @@ add_library(gravitymaze SHARED
 
 target_include_directories(gravitymaze PRIVATE
         "PlanarPhysics/Engine/Source"
-        "ParseParty/Source")
+        "ParseParty/Source"
+        "oboe/include")
 
 # Searches for a package provided by the game activity dependency
 find_package(game-activity REQUIRED CONFIG)
@@ -54,4 +58,5 @@ target_link_libraries(gravitymaze
         GLESv3
         jnigraphics
         android
+        oboe
         log)

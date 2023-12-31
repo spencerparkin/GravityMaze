@@ -14,6 +14,7 @@ Options::Options()
 {
     this->gravity = 980.0;
     this->bounce = 0.5;
+    this->audio = true;
 }
 
 /*virtual*/ Options::~Options()
@@ -86,6 +87,10 @@ bool Options::LoadFromString(const char* optionsJsonBuf, int optionsJsonBufSize)
     auto jsonBounce = dynamic_cast<const JsonFloat*>(jsonOptions->GetValue("bounce"));
     if(jsonBounce)
         this->bounce = jsonBounce->GetValue();
+
+    auto jsonAudio = dynamic_cast<const JsonBool*>(jsonOptions->GetValue("audio"));
+    if(jsonAudio)
+        this->audio = jsonAudio->GetValue();
 
     return true;
 }

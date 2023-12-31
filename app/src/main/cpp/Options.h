@@ -16,4 +16,5 @@ private:
 public:
     double gravity;
     double bounce;
+    bool audio;
 };

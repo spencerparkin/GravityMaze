@@ -11,6 +11,7 @@ import kotlinx.serialization.json.*
 import java.io.File
 
 // A view-model approach is better, but I can barely write kotlin code, so let's just do this for now.
+// TODO: Expose audio option here.
 class OptionsActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
