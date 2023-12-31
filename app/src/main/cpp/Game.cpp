@@ -674,7 +674,7 @@ Game::PhysicsWorld::PhysicsWorld()
 bool Game::PhysicsWorld::IsMazeSolved()
 {
 #ifdef DEBUG_END_OF_GAME
-    return this->QueenDeadOrNonExistent();
+    return this->QueenDeadOrNonExistent() && this->FindTheQueen();
 #else
     return this->GetGoodMazeBlockCount() == this->GetGoodMazeBlockTouchedCount() && this->QueenDeadOrNonExistent();
 #endif
