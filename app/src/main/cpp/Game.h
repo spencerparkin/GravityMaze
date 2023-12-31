@@ -14,6 +14,8 @@ struct android_app;
 
 class MazeQueen;
 
+#define FINAL_GRAVITY_MAZE_LEVEL        40
+
 class Game
 {
 public:

@@ -70,6 +70,9 @@ MazeWorm::MazeWorm()
     auto mazeQueen = dynamic_cast<MazeQueen*>(planarObject);
     if(mazeQueen)
     {
+#if defined DEBUG_END_OF_GAME
+        mazeQueen->alive = false;
+#else
         auto physicsWorld = dynamic_cast<Game::PhysicsWorld*>(engine);
         if(physicsWorld)
         {
@@ -78,6 +81,7 @@ MazeWorm::MazeWorm()
                 mazeQueen->alive = false;
             }
         }
+#endif
     }
 }
 

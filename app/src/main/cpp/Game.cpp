@@ -437,8 +437,8 @@ Game::GenerateMazeState::GenerateMazeState(Game* game) : State(game)
     if(!progress.Load(this->game->app))
         aout << "Failed to load progress!" << std::endl;
 
-#if 1   // Enable this for testing purposes.
-    progress.SetLevel(40);
+#if defined DEBUG_END_OF_GAME
+    progress.SetLevel(FINAL_GRAVITY_MAZE_LEVEL);
 #endif
 
     int level = progress.GetLevel();
@@ -447,7 +447,7 @@ Game::GenerateMazeState::GenerateMazeState(Game* game) : State(game)
 
     aout << "Level " << level << " is a maze of size " << rows << " by " << cols << "." << std::endl;
 
-    bool queen = (level == 40); // Level 40 is the final level.
+    bool queen = (level == FINAL_GRAVITY_MAZE_LEVEL);
     maze.Generate(rows, cols);
     maze.PopulatePhysicsWorld(&physicsEngine, progress.GetTouches(), queen, options.bounce);
 
@@ -673,7 +673,11 @@ Game::PhysicsWorld::PhysicsWorld()
 
 bool Game::PhysicsWorld::IsMazeSolved()
 {
+#ifdef DEBUG_END_OF_GAME
+    return this->QueenDeadOrNonExistent();
+#else
     return this->GetGoodMazeBlockCount() == this->GetGoodMazeBlockTouchedCount() && this->QueenDeadOrNonExistent();
+#endif
 }
 
 int Game::PhysicsWorld::GetGoodMazeBlockCount()
