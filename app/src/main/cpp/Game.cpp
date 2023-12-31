@@ -2,6 +2,7 @@
 #include "MazeObject.h"
 #include "MazeObjects/MazeBlock.h"
 #include "MazeObjects/MazeBall.h"
+#include "MazeObjects/MazeQueen.h"
 #include "Math/GeometricAlgebra/Vector2D.h"
 #include "Math/Utilities/Random.h"
 #include "PlanarObjects/Wall.h"
@@ -278,15 +279,6 @@ void Game::HandleSensorEvent(void* data)
 
 void Game::Tick()
 {
-    // TODO: After profiling our frame-rate, and testing with the following line
-    //       enabled and disabled, I have identified it as the culprit for periodic
-    //       dips in the frame-rate.  More profiling should be done to pin-point
-    //       exactly where in the physics tick we are slowing down.  It's probably
-    //       in the collision handling, but we need more information.  Is the slow-
-    //       down in the broad-phase handling, or the narrow-phase?  Does the lambda
-    //       stuff have an impact?  This is all somewhat reproducable on PC, by the
-    //       way, because a debug build runs really slow, but a release build seems
-    //       reasonably fast, but I have never understood exactly why that is the case.
     double deltaTime = this->physicsWorld.Tick();
 
     if(this->state)
@@ -382,6 +374,8 @@ void Game::Render()
     textColor = (frameRate < 60) ? ((frameRate < 30) ? Color(1.0, 0.0, 0.0) : Color(1.0, 1.0, 0.0)) : Color(0.0, 1.0, 0.0);
     this->textRenderer.RenderText(text, textTransform, textColor, this->drawHelper);
 
+    this->state->Render(drawHelper);
+
     this->drawHelper.EndRender();
 
     auto swapResult = eglSwapBuffers(this->display, this->surface);
@@ -417,6 +411,10 @@ Game::State::State(Game* game)
     return 1.0;
 }
 
+/*virtual*/ void Game::State::Render(DrawHelper& drawHelper) const
+{
+}
+
 //------------------------------ Game::GenerateMazeState ------------------------------
 
 Game::GenerateMazeState::GenerateMazeState(Game* game) : State(game)
@@ -439,14 +437,19 @@ Game::GenerateMazeState::GenerateMazeState(Game* game) : State(game)
     if(!progress.Load(this->game->app))
         aout << "Failed to load progress!" << std::endl;
 
+#if 1   // Enable this for testing purposes.
+    progress.SetLevel(40);
+#endif
+
     int level = progress.GetLevel();
     int rows = level + 5;
     int cols = (int)::round(double(rows) * this->game->GetSurfaceAspectRatio());
 
     aout << "Level " << level << " is a maze of size " << rows << " by " << cols << "." << std::endl;
 
+    bool queen = (level == 40); // Level 40 is the final level.
     maze.Generate(rows, cols);
-    maze.PopulatePhysicsWorld(&physicsEngine, progress.GetTouches(), options.bounce);
+    maze.PopulatePhysicsWorld(&physicsEngine, progress.GetTouches(), queen, options.bounce);
 
     physicsEngine.accelerationDueToGravity = Vector2D(0.0, -options.gravity);
 }
@@ -571,7 +574,13 @@ Game::FlyMazeOutState::FlyMazeOutState(Game* game) : State(game)
 {
     this->transitionAlpha += this->animRate * deltaTime;
     if(this->transitionAlpha > 1.0)
+    {
+        MazeQueen* mazeQueen = this->game->physicsWorld.FindTheQueen();
+        if(mazeQueen && !mazeQueen->alive)
+            return new GameWonState(this->game);
+
         return new GenerateMazeState(this->game);
+    }
 
     return this;
 }
@@ -601,7 +610,12 @@ Game::PlayGameState::PlayGameState(Game* game) : State(game)
         this->game->progress.SetTouches(this->game->physicsWorld.GetGoodMazeBlockTouchedCount());
     else
     {
-        this->game->progress.SetLevel(this->game->progress.GetLevel() + 1);
+        MazeQueen* mazeQueen = this->game->physicsWorld.FindTheQueen();
+        if(!mazeQueen)
+            this->game->progress.SetLevel(this->game->progress.GetLevel() + 1);
+        else
+            this->game->progress.SetLevel(0);
+
         this->game->progress.SetTouches(0);
     }
 
@@ -616,6 +630,37 @@ Game::PlayGameState::PlayGameState(Game* game) : State(game)
     return this;
 }
 
+//------------------------------ Game::GameWonState ------------------------------
+
+Game::GameWonState::GameWonState(Game* game) : State(game)
+{
+}
+
+/*virtual*/ Game::GameWonState::~GameWonState()
+{
+}
+
+/*virtual*/ void Game::GameWonState::Enter()
+{
+}
+
+/*virtual*/ void Game::GameWonState::Leave()
+{
+}
+
+/*virtual*/ Game::State* Game::GameWonState::Tick(double deltaTime)
+{
+    return this;
+}
+
+/*virtual*/ void Game::GameWonState::Render(DrawHelper& drawHelper) const
+{
+    // TODO: Render "you won" on the screen.
+
+    // TODO: Can the user choose here to add their name to a database of game winners?
+    //       Where could I host such a database?  Not for free, certainly, so maybe I won't bother.
+}
+
 //------------------------------ Game::PhysicsWorld ------------------------------
 
 Game::PhysicsWorld::PhysicsWorld()
@@ -628,9 +673,7 @@ Game::PhysicsWorld::PhysicsWorld()
 
 bool Game::PhysicsWorld::IsMazeSolved()
 {
-    // TODO: For the final level, the condition here will be more complicated.
-
-    return this->GetGoodMazeBlockCount() == this->GetGoodMazeBlockTouchedCount();
+    return this->GetGoodMazeBlockCount() == this->GetGoodMazeBlockTouchedCount() && this->QueenDeadOrNonExistent();
 }
 
 int Game::PhysicsWorld::GetGoodMazeBlockCount()
@@ -655,4 +698,22 @@ int Game::PhysicsWorld::GetGoodMazeBlockTouchedCount()
     }
 
     return count;
+}
+
+bool Game::PhysicsWorld::QueenDeadOrNonExistent()
+{
+    MazeQueen* mazeQueen = this->FindTheQueen();
+    return !mazeQueen || !mazeQueen->alive;
+}
+
+MazeQueen* Game::PhysicsWorld::FindTheQueen()
+{
+    for(auto planarObject : this->GetPlanarObjectArray())
+    {
+        auto mazeQueen = dynamic_cast<MazeQueen *>(planarObject);
+        if (mazeQueen)
+            return mazeQueen;
+    }
+
+    return nullptr;
 }

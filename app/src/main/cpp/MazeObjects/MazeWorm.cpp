@@ -1,7 +1,9 @@
 #include "MazeWorm.h"
 #include "MazeBlock.h"
+#include "MazeQueen.h"
 #include "Math/Utilities/Random.h"
 #include "../DrawHelper.h"
+#include "../Game.h"
 
 using namespace PlanarPhysics;
 
@@ -64,6 +66,19 @@ MazeWorm::MazeWorm()
     auto mazeBlock = dynamic_cast<GoodMazeBlock*>(planarObject);
     if(mazeBlock)
         mazeBlock->SetTouched(false);
+
+    auto mazeQueen = dynamic_cast<MazeQueen*>(planarObject);
+    if(mazeQueen)
+    {
+        auto physicsWorld = dynamic_cast<Game::PhysicsWorld*>(engine);
+        if(physicsWorld)
+        {
+            if(physicsWorld->GetGoodMazeBlockCount() == physicsWorld->GetGoodMazeBlockTouchedCount())
+            {
+                mazeQueen->alive = false;
+            }
+        }
+    }
 }
 
 /*virtual*/ PlanarPhysics::Vector2D MazeWorm::GetPosition() const

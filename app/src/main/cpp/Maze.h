@@ -22,7 +22,7 @@ public:
     virtual ~Maze();
 
     bool Generate(int rows, int cols);
-    void PopulatePhysicsWorld(PlanarPhysics::Engine* engine, int touches, double bounceFactor) const;
+    void PopulatePhysicsWorld(PlanarPhysics::Engine* engine, int touches, bool queen, double bounceFactor) const;
     void Clear();
 
 private:

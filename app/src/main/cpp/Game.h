@@ -12,6 +12,8 @@
 
 struct android_app;
 
+class MazeQueen;
+
 class Game
 {
 public:
@@ -41,6 +43,7 @@ public:
         virtual void Leave();
         virtual State* Tick(double deltaTime);
         virtual double GetTransitionAlpha() const;
+        virtual void Render(DrawHelper& drawHelper) const;
 
         Game* game;
     };
@@ -97,6 +100,18 @@ public:
         virtual State* Tick(double deltaTime) override;
     };
 
+    class GameWonState : public State
+    {
+    public:
+        GameWonState(Game* game);
+        virtual ~GameWonState();
+
+        virtual void Enter() override;
+        virtual void Leave() override;
+        virtual State* Tick(double deltaTime) override;
+        virtual void Render(DrawHelper& drawHelper) const override;
+    };
+
     double GetSurfaceAspectRatio() const;
 
     class PhysicsWorld : public PlanarPhysics::Engine
@@ -108,6 +123,8 @@ public:
         bool IsMazeSolved();
         int GetGoodMazeBlockCount();
         int GetGoodMazeBlockTouchedCount();
+        bool QueenDeadOrNonExistent();
+        MazeQueen* FindTheQueen();
     };
 
 private:

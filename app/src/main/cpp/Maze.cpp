@@ -3,6 +3,7 @@
 #include "MazeObjects/MazeBall.h"
 #include "MazeObjects/MazeBlock.h"
 #include "MazeObjects/MazeWorm.h"
+#include "MazeObjects/MazeQueen.h"
 #include "Engine.h"
 #include "Math/Utilities/BoundingBox.h"
 #include "Math/GeometricAlgebra/PScalar2D.h"
@@ -153,7 +154,7 @@ Maze::Node* Maze::RandomNode(std::list<Node*>& nodeList, bool remove)
     return node;
 }
 
-void Maze::PopulatePhysicsWorld(PlanarPhysics::Engine* engine, int touches, double bounceFactor) const
+void Maze::PopulatePhysicsWorld(PlanarPhysics::Engine* engine, int touches, bool queen, double bounceFactor) const
 {
     engine->Clear();
 
@@ -258,6 +259,15 @@ void Maze::PopulatePhysicsWorld(PlanarPhysics::Engine* engine, int touches, doub
         mazeWorm->SetBounceFactor(1.0);
         mazeWorm->velocity = Random::Vector(200.0, 250.0);
         mazeWorm->SetFlags(PLNR_OBJ_FLAG_CALL_COLLISION_FUNC);
+    }
+
+    if(queen)
+    {
+        MazeQueen *mazeQueen = engine->AddPlanarObject<MazeQueen>();
+        mazeQueen->position = nodeArray[*slot++]->center;
+        mazeQueen->radius = MAZE_CELL_SIZE / 4.0;
+        mazeQueen->SetBounceFactor(1.0);
+        mazeQueen->SetFlags(PLNR_OBJ_FLAG_INFLUENCED_BY_GRAVITY | PLNR_OBJ_FLAG_CALL_COLLISION_FUNC);
     }
 
     engine->ConsolidateWalls();

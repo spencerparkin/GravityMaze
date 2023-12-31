@@ -32,6 +32,7 @@ add_library(gravitymaze SHARED
         MazeObjects/MazeWall.cpp
         MazeObjects/MazeBlock.cpp
         MazeObjects/MazeWorm.cpp
+        MazeObjects/MazeQueen.cpp
         ${PlanarPhysicsSources}
         ${ParsePartySources})
 
