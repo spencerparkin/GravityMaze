@@ -45,6 +45,11 @@ Game::Game(android_app* app)
 }
 
 // TODO: Add sound FX.
+// TODO: Tunnelling is an issue.  Perhaps the best way to solve it is to binary search for
+//       a more accurate time of impact in the physics engine, or to ray-cast from position
+//       to position to prevent jumping over a collision.  In any case, we should add a fail-
+//       safe here to just put any object back in the maze if it falls out of the physics
+//       world entirely.
 bool Game::Init()
 {
     if(this->initialized)
