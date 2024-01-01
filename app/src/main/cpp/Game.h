@@ -27,10 +27,8 @@ public:
     bool Shutdown();
     bool SetupWindow();
     bool ShutdownWindow();
-    void Render();
     bool Tick();
     void HandleSensorEvent(void* data);
-    void SaveProgress();
 
     enum
     {

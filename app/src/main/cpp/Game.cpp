@@ -63,7 +63,9 @@ Game::Game(android_app* app)
         {
             if(game)
             {
-                game->SaveProgress();
+                game->progress.SetTouches(game->physicsWorld.GetGoodMazeBlockTouchedCount());
+                game->progress.Save(app);
+
                 game->ShutdownWindow();
             }
 
@@ -72,7 +74,10 @@ Game::Game(android_app* app)
         case APP_CMD_DESTROY:
         {
             if(game)
-                game->SaveProgress();
+            {
+                game->progress.SetTouches(game->physicsWorld.GetGoodMazeBlockTouchedCount());
+                game->progress.Save(app);
+            }
 
             break;
         }
@@ -81,12 +86,6 @@ Game::Game(android_app* app)
             break;
         }
     }
-}
-
-void Game::SaveProgress()
-{
-    this->progress.SetTouches(this->physicsWorld.GetGoodMazeBlockTouchedCount());
-    this->progress.Save(app);
 }
 
 // TODO: Tunnelling is an issue.  Perhaps the best way to solve it is to binary search for
@@ -362,6 +361,16 @@ void Game::HandleSensorEvent(void* data)
 
 bool Game::Tick()
 {
+    clock_t currentTime = ::clock();
+    double frameRate = 0.0;
+    double elapsedTime = 0.0;
+    if(this->lastTime != 0)
+    {
+        elapsedTime = double(currentTime - this->lastTime) / double(CLOCKS_PER_SEC);
+        frameRate = 1.0 / elapsedTime;
+    }
+    this->lastTime = currentTime;
+
     void* data = nullptr;
     int events = 0;
     int id = ALooper_pollOnce(0, nullptr, &events, &data);
@@ -384,15 +393,13 @@ bool Game::Tick()
         }
     }
 
-    double deltaTime = 0.0;
-
     // Don't advance the physics unless we're also able to render it.
     if(this->display != EGL_NO_DISPLAY)
-        deltaTime = this->physicsWorld.Tick();
+        this->physicsWorld.Tick();
 
     if(this->state)
     {
-        State* newState = this->state->Tick(deltaTime);
+        State* newState = this->state->Tick(elapsedTime);
         if(newState != this->state)
             this->SetState(newState);
     }
@@ -421,6 +428,50 @@ bool Game::Tick()
         android_app_clear_key_events(inputBuffer);
     }
 
+    // Render a frame if we're initialized and we have a window.
+    if(this->initialized && this->display != EGL_NO_DISPLAY)
+    {
+        glClear(GL_COLOR_BUFFER_BIT);
+
+        double transitionAlpha = this->state ? this->state->GetTransitionAlpha() : 0.0;
+
+        double aspectRatio = double(this->surfaceWidth) / double(this->surfaceHeight);
+        this->drawHelper.BeginRender(&this->physicsWorld, aspectRatio);
+
+        const std::vector<PlanarObject*> &planarObjectArray = this->physicsWorld.GetPlanarObjectArray();
+        for (const PlanarObject* planarObject: planarObjectArray)
+        {
+            auto mazeObject = dynamic_cast<const MazeObject*>(planarObject);
+            if (mazeObject)
+            {
+                mazeObject->Render(this->drawHelper, transitionAlpha);
+            }
+        }
+
+        Transform textTransform;
+        textTransform.scale = (this->progress.GetLevel() < 5) ? (MAZE_CELL_SIZE / 4.0) : (MAZE_CELL_SIZE / 2.0);
+        char text[64];
+        Color textColor;
+        const BoundingBox &worldBox = this->physicsWorld.GetWorldBox();
+
+        textTransform.translation = Vector2D(worldBox.min.x, worldBox.max.y);
+        sprintf(text, "Level %d", this->progress.GetLevel());
+        textColor = Color(1.0, 1.0, 1.0);
+        this->textRenderer.RenderText(text, textTransform, textColor, this->drawHelper);
+
+        textTransform.translation = Vector2D(worldBox.min.y, worldBox.min.y - textTransform.scale);
+        sprintf(text, "FPS = %06.2f", frameRate);
+        textColor = (frameRate < 60) ? ((frameRate < 30) ? Color(1.0, 0.0, 0.0) : Color(1.0, 1.0, 0.0)) : Color(0.0, 1.0, 0.0);
+        this->textRenderer.RenderText(text, textTransform, textColor, this->drawHelper);
+
+        this->state->Render(drawHelper);
+
+        this->drawHelper.EndRender();
+
+        auto swapResult = eglSwapBuffers(this->display, this->surface);
+        assert(swapResult == EGL_TRUE);
+    }
+
     return !this->app->destroyRequested;
 }
 
@@ -436,61 +487,6 @@ void Game::SetState(State* newState)
 
     if(this->state)
         this->state->Enter();
-}
-
-void Game::Render()
-{
-    if(!this->initialized || this->display == EGL_NO_DISPLAY)
-        return;
-
-    clock_t currentTime = ::clock();
-    double frameRate = 0.0;
-    if(this->lastTime != 0)
-    {
-        double elapsedTime = double(currentTime - this->lastTime) / double(CLOCKS_PER_SEC);
-        frameRate = 1.0 / elapsedTime;
-    }
-    this->lastTime = currentTime;
-
-    glClear(GL_COLOR_BUFFER_BIT);
-
-    double transitionAlpha = this->state ? this->state->GetTransitionAlpha() : 0.0;
-
-    double aspectRatio = double(this->surfaceWidth) / double(this->surfaceHeight);
-    this->drawHelper.BeginRender(&this->physicsWorld, aspectRatio);
-
-    const std::vector<PlanarObject*>& planarObjectArray = this->physicsWorld.GetPlanarObjectArray();
-    for(const PlanarObject* planarObject : planarObjectArray)
-    {
-        auto mazeObject = dynamic_cast<const MazeObject*>(planarObject);
-        if(mazeObject)
-        {
-            mazeObject->Render(this->drawHelper, transitionAlpha);
-        }
-    }
-
-    Transform textTransform;
-    textTransform.scale = (this->progress.GetLevel() < 5) ? (MAZE_CELL_SIZE / 4.0) : (MAZE_CELL_SIZE / 2.0);
-    char text[64];
-    Color textColor;
-    const BoundingBox& worldBox = this->physicsWorld.GetWorldBox();
-
-    textTransform.translation = Vector2D(worldBox.min.x, worldBox.max.y);
-    sprintf(text, "Level %d", this->progress.GetLevel());
-    textColor = Color(1.0, 1.0, 1.0);
-    this->textRenderer.RenderText(text, textTransform, textColor, this->drawHelper);
-
-    textTransform.translation = Vector2D(worldBox.min.y, worldBox.min.y - textTransform.scale);
-    sprintf(text, "FPS = %06.2f", frameRate);
-    textColor = (frameRate < 60) ? ((frameRate < 30) ? Color(1.0, 0.0, 0.0) : Color(1.0, 1.0, 0.0)) : Color(0.0, 1.0, 0.0);
-    this->textRenderer.RenderText(text, textTransform, textColor, this->drawHelper);
-
-    this->state->Render(drawHelper);
-
-    this->drawHelper.EndRender();
-
-    auto swapResult = eglSwapBuffers(this->display, this->surface);
-    assert(swapResult == EGL_TRUE);
 }
 
 //------------------------------ Game::State ------------------------------
@@ -720,7 +716,6 @@ Game::PlayGameState::PlayGameState(Game* game) : State(game)
 
 /*virtual*/ void Game::PlayGameState::Leave()
 {
-    this->game->SaveProgress();
 }
 
 /*virtual*/ Game::State* Game::PlayGameState::Tick(double deltaTime)

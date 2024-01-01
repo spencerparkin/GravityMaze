@@ -15,12 +15,8 @@ void android_main(struct android_app* app)
     Game* game = new Game(app);
     game->Setup();
 
-    while(true)
+    while(game->Tick())
     {
-        if(!game->Tick())
-            break;
-
-        game->Render();
     }
 
     game->Shutdown();
