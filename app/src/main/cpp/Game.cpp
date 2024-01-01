@@ -330,10 +330,14 @@ void Game::HandleSensorEvent(void* data)
             {
                 //aout << "Gravity sensed: " << sensorEvent.vector.x << ", " << sensorEvent.vector.y << ", " << sensorEvent.vector.z << std::endl;
 
-                double gravityAccel = this->options.gravity;
-                this->physicsWorld.accelerationDueToGravity = Vector2D(-sensorEvent.vector.x, -sensorEvent.vector.y).Normalized();
-                this->physicsWorld.accelerationDueToGravity *= gravityAccel * ::sqrt(::abs(1.0 - ::abs(sensorEvent.vector.z / 9.8)));
+                Vector2D gravityVector(-sensorEvent.vector.x, -sensorEvent.vector.y);
+                if(!gravityVector.Normalize())
+                    gravityVector = Vector2D(0.0, 0.0);
 
+                double gravityAccel = this->options.gravity;
+                gravityVector *= gravityAccel * ::sqrt(::abs(1.0 - ::abs(sensorEvent.vector.z / 9.8)));
+
+                this->physicsWorld.accelerationDueToGravity = gravityVector;
                 break;
             }
         }
