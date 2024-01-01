@@ -20,11 +20,6 @@ bool AudioSubSystem::Setup()
 
     do
     {
-        // TODO: We don't want to be loading our audio clips here and then destroying
-        //       them when we shutdown, because we're going to be setup and shutdown
-        //       with the window.  Rather, we could just expect a pointer to an audio
-        //       clip cache owned by the main program.
-
         if (this->systemSetup)
         {
             aout << "Audio sub-system already initialized!" << std::endl;

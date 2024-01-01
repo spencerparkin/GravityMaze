@@ -23,10 +23,12 @@ public:
     Game(android_app* app);
     virtual ~Game();
 
-    bool Init();
+    bool Setup();
     bool Shutdown();
+    bool SetupWindow();
+    bool ShutdownWindow();
     void Render();
-    void Tick();
+    bool Tick();
     void HandleSensorEvent(void* data);
 
     enum
@@ -130,6 +132,8 @@ public:
         bool QueenDeadOrNonExistent();
         MazeQueen* FindTheQueen();
     };
+
+    static void HandleAndroidCommand(android_app* app, int32_t cmd);
 
 private:
 

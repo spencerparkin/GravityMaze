@@ -8,86 +8,24 @@ extern "C" {
 
 #include <game-activity/native_app_glue/android_native_app_glue.c>
 
-void HandleCommand(android_app* app, int32_t cmd)
-{
-    switch (cmd)
-    {
-        case APP_CMD_INIT_WINDOW:
-        {
-            Game* game = new Game(app);
-
-            if(!game->Init())
-            {
-                // TODO: Handle error here somehow?
-            }
-
-            app->userData = game;
-            break;
-        }
-        case APP_CMD_TERM_WINDOW:
-        {
-            if (app->userData)
-            {
-                auto game = reinterpret_cast<Game*>(app->userData);
-                if(!game->Shutdown())
-                {
-                    // TODO: Handle error here somehow?
-                }
-
-                delete game;
-                app->userData = nullptr;
-            }
-            break;
-        }
-        default:
-        {
-            break;
-        }
-    }
-}
-
 void android_main(struct android_app* app)
 {
     aout << "Android main begin!" << std::endl;
 
-    app->onAppCmd = HandleCommand;
+    Game* game = new Game(app);
+    game->Setup();
 
-    android_app_set_key_event_filter(app, nullptr);
-
-    do
+    while(true)
     {
-        Game* game = reinterpret_cast<Game*>(app->userData);
+        if(!game->Tick())
+            break;
 
-        void* data = nullptr;
-        int events = 0;
-        int id = ALooper_pollOnce(0, nullptr, &events, &data);
-        if (id >= 0)
-        {
-            switch(id)
-            {
-                case Game::SENSOR_EVENT_ID:
-                {
-                    if(game)
-                        game->HandleSensorEvent(data);
-                    break;
-                }
-                default:
-                {
-                    auto source = reinterpret_cast<android_poll_source*>(data);
-                    if (source)
-                        source->process(app, source);
-                    break;
-                }
-            }
-        }
-
-        if(game)
-        {
-            game->Tick();
-            game->Render();
-        }
+        game->Render();
     }
-    while (!app->destroyRequested);
+
+    game->Shutdown();
+    delete game;
+    game = nullptr;
 
     aout << "Android main finished!" << std::endl;
 }

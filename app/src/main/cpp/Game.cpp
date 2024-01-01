@@ -24,6 +24,8 @@ using namespace PlanarPhysics;
 
 Game::Game(android_app* app)
 {
+    app->onAppCmd = &Game::HandleAndroidCommand;
+
     this->debugWinEntireGame = false;
     this->initialized = false;
     this->app = app;
@@ -44,19 +46,51 @@ Game::Game(android_app* app)
     delete this->state;
 }
 
-// TODO: Add sound FX.
+/*static*/ void Game::HandleAndroidCommand(android_app* app, int32_t cmd)
+{
+    Game* game = reinterpret_cast<Game*>(app->userData);
+
+    switch (cmd)
+    {
+        case APP_CMD_INIT_WINDOW:
+        {
+            if(game && !game->SetupWindow())
+                game->ShutdownWindow();
+
+            break;
+        }
+        case APP_CMD_TERM_WINDOW:
+        {
+            if(game)
+                game->ShutdownWindow();
+
+            break;
+        }
+        default:
+        {
+            break;
+        }
+    }
+}
+
 // TODO: Tunnelling is an issue.  Perhaps the best way to solve it is to binary search for
 //       a more accurate time of impact in the physics engine, or to ray-cast from position
 //       to position to prevent jumping over a collision.  In any case, we should add a fail-
 //       safe here to just put any object back in the maze if it falls out of the physics
 //       world entirely.
-bool Game::Init()
+// Note that we don't setup our window stuff here, because there may not be a window yet.
+// Furthermore, the window can come and go while the game is setup.
+bool Game::Setup()
 {
     if(this->initialized)
     {
         aout << "Already initialized game!" << std::endl;
         return false;
     }
+
+    this->app->userData = this;
+
+    android_app_set_key_event_filter(this->app, nullptr);
 
     // We need to do this, because the game doesn't take any input from swipes or touches.
     // TODO: Why doesn't this work?  :(
@@ -124,6 +158,49 @@ bool Game::Init()
         return false;
     }
 
+    if(this->options.audio && !this->audioSubSystem.Setup())
+    {
+        aout << "Failed to initialize the audio sub-system." << std::endl;
+        return false;
+    }
+
+    this->SetState(new GenerateMazeState(this));
+
+    this->initialized = true;
+    return true;
+}
+
+bool Game::Shutdown()
+{
+    this->SetState(nullptr);
+
+    this->ShutdownWindow();
+
+    this->maze.Clear();
+    this->physicsWorld.Clear();
+
+    if(this->sensorEventQueue)
+    {
+        if(this->gravitySensor)
+            ASensorEventQueue_disableSensor(this->sensorEventQueue, this->gravitySensor);
+
+        ASensorManager_destroyEventQueue(this->sensorManager, this->sensorEventQueue);
+        this->sensorEventQueue = nullptr;
+    }
+
+    this->sensorManager = nullptr;
+    this->gravitySensor = nullptr;
+
+    this->audioSubSystem.Shutdown();
+
+    this->app->userData = nullptr;
+
+    this->initialized = false;
+    return true;
+}
+
+bool Game::SetupWindow()
+{
     this->display = eglGetDisplay(EGL_DEFAULT_DISPLAY);
     if(this->display == EGL_NO_DISPLAY)
     {
@@ -154,18 +231,18 @@ bool Game::Init()
     eglChooseConfig(this->display, attribs, supportedConfigs.get(), numConfigs, &numConfigs);
 
     EGLConfig* foundConfig = std::find_if(supportedConfigs.get(), supportedConfigs.get() + numConfigs,
-        [this](const EGLConfig& config)
-        {
-            EGLint red = 0, green = 0, blue = 0, depth = 0;
-            if (eglGetConfigAttrib(this->display, config, EGL_RED_SIZE, &red) &&
-                eglGetConfigAttrib(this->display, config, EGL_GREEN_SIZE, &green) &&
-                eglGetConfigAttrib(this->display, config, EGL_BLUE_SIZE, &blue) &&
-                eglGetConfigAttrib(this->display, config, EGL_DEPTH_SIZE, &depth))
-            {
-                return red == 8 && green == 8 && blue == 8 && depth == 24;
-            }
-            return false;
-        });
+          [this](const EGLConfig& config)
+          {
+              EGLint red = 0, green = 0, blue = 0, depth = 0;
+              if (eglGetConfigAttrib(this->display, config, EGL_RED_SIZE, &red) &&
+                  eglGetConfigAttrib(this->display, config, EGL_GREEN_SIZE, &green) &&
+                  eglGetConfigAttrib(this->display, config, EGL_BLUE_SIZE, &blue) &&
+                  eglGetConfigAttrib(this->display, config, EGL_DEPTH_SIZE, &depth))
+              {
+                  return red == 8 && green == 8 && blue == 8 && depth == 24;
+              }
+              return false;
+          });
 
     if(!foundConfig)
     {
@@ -207,22 +284,11 @@ bool Game::Init()
         return false;
     }
 
-    if(this->options.audio && !this->audioSubSystem.Setup())
-    {
-        aout << "Failed to initialize the audio sub-system." << std::endl;
-        return false;
-    }
-
-    this->SetState(new GenerateMazeState(this));
-
-    this->initialized = true;
     return true;
 }
 
-bool Game::Shutdown()
+bool Game::ShutdownWindow()
 {
-    this->SetState(nullptr);
-
     this->drawHelper.Shutdown();
 
     if (this->display != EGL_NO_DISPLAY)
@@ -245,24 +311,6 @@ bool Game::Shutdown()
         this->display = EGL_NO_DISPLAY;
     }
 
-    this->maze.Clear();
-    this->physicsWorld.Clear();
-
-    if(this->sensorEventQueue)
-    {
-        if(this->gravitySensor)
-            ASensorEventQueue_disableSensor(this->sensorEventQueue, this->gravitySensor);
-
-        ASensorManager_destroyEventQueue(this->sensorManager, this->sensorEventQueue);
-        this->sensorEventQueue = nullptr;
-    }
-
-    this->sensorManager = nullptr;
-    this->gravitySensor = nullptr;
-
-    this->audioSubSystem.Shutdown();
-
-    this->initialized = false;
     return true;
 }
 
@@ -292,9 +340,35 @@ void Game::HandleSensorEvent(void* data)
     }
 }
 
-void Game::Tick()
+bool Game::Tick()
 {
-    double deltaTime = this->physicsWorld.Tick();
+    void* data = nullptr;
+    int events = 0;
+    int id = ALooper_pollOnce(0, nullptr, &events, &data);
+    if (id >= 0)
+    {
+        switch(id)
+        {
+            case Game::SENSOR_EVENT_ID:
+            {
+                this->HandleSensorEvent(data);
+                break;
+            }
+            default:
+            {
+                auto source = reinterpret_cast<android_poll_source*>(data);
+                if (source)
+                    source->process(app, source);
+                break;
+            }
+        }
+    }
+
+    double deltaTime = 0.0;
+
+    // Don't advance the physics unless we're also able to render it.
+    if(this->display != EGL_NO_DISPLAY)
+        deltaTime = this->physicsWorld.Tick();
 
     if(this->state)
     {
@@ -326,6 +400,8 @@ void Game::Tick()
 
         android_app_clear_key_events(inputBuffer);
     }
+
+    return !this->app->destroyRequested;
 }
 
 void Game::SetState(State* newState)
@@ -344,7 +420,7 @@ void Game::SetState(State* newState)
 
 void Game::Render()
 {
-    if(!this->initialized)
+    if(!this->initialized || this->display == EGL_NO_DISPLAY)
         return;
 
     clock_t currentTime = ::clock();
@@ -442,6 +518,17 @@ Game::GenerateMazeState::GenerateMazeState(Game* game) : State(game)
 
 /*virtual*/ void Game::GenerateMazeState::Enter()
 {
+}
+
+/*virtual*/ void Game::GenerateMazeState::Leave()
+{
+}
+
+/*virtual*/ Game::State* Game::GenerateMazeState::Tick(double deltaTime)
+{
+    if(this->game->display == EGL_NO_DISPLAY)
+        return this;
+
     Maze& maze = this->game->maze;
     Engine& physicsEngine = this->game->physicsWorld;
     Options& options = this->game->options;
@@ -463,14 +550,7 @@ Game::GenerateMazeState::GenerateMazeState(Game* game) : State(game)
     maze.PopulatePhysicsWorld(&physicsEngine, progress.GetTouches(), queen, options.bounce);
 
     physicsEngine.accelerationDueToGravity = Vector2D(0.0, -options.gravity);
-}
 
-/*virtual*/ void Game::GenerateMazeState::Leave()
-{
-}
-
-/*virtual*/ Game::State* Game::GenerateMazeState::Tick(double deltaTime)
-{
     return new FlyMazeInState(this->game);
 }
 
@@ -478,7 +558,7 @@ Game::GenerateMazeState::GenerateMazeState(Game* game) : State(game)
 
 Game::FlyMazeInState::FlyMazeInState(Game* game) : State(game)
 {
-    this->animRate = 2.0;
+    this->animRate = 1.0;
     this->transitionAlpha = 0.0;
 }
 
@@ -547,7 +627,7 @@ Game::FlyMazeInState::FlyMazeInState(Game* game) : State(game)
 
 Game::FlyMazeOutState::FlyMazeOutState(Game* game) : State(game)
 {
-    this->animRate = 2.0;
+    this->animRate = 1.0;
     this->transitionAlpha = 0.0;
 }
 
