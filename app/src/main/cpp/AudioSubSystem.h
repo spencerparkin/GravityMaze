@@ -1,6 +1,7 @@
 #pragma once
 
 #include <oboe/Oboe.h>
+#include <wav/WavStreamReader.h>
 
 // This is the abstraction layer between our game software and the underlying audio library.
 class AudioSubSystem
@@ -21,7 +22,6 @@ public:
         EVIL_QUEEN_DESTROYED
     };
 
-    // It's okay to call this even if this sub-system is not initialized; it just won't do anything.
     void PlayFX(SoundFX soundFX);
 
 private:
