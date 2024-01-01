@@ -593,6 +593,8 @@ Game::FlyMazeInState::FlyMazeInState(Game* game) : State(game)
 
     const BoundingBox& worldBox = physicsEngine.GetWorldBox();
 
+    Random::Seed((unsigned)::time(nullptr));
+
     Vector2D verticalTranslation(0.0, worldBox.Height());
     Vector2D horizontalTranslation(worldBox.Width(), 0.0);
     Vector2D diagATranslation(worldBox.Width(), worldBox.Height());
@@ -662,6 +664,7 @@ Game::FlyMazeOutState::FlyMazeOutState(Game* game) : State(game)
 
     Vector2D center = worldBox.Center();
 
+    // TODO: This doesn't work as expected.  Why?
     const std::vector<PlanarObject*>& planarObjectArray = physicsEngine.GetPlanarObjectArray();
     for(PlanarObject* planarObject : planarObjectArray)
     {
