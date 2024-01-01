@@ -1,5 +1,7 @@
 #include "AudioSubSystem.h"
 #include "AndroidOut.h"
+#include <wav/WavStreamReader.h>
+#include <stream/MemInputStream.h>
 
 //------------------------------ AudioSubSystem ------------------------------
 
@@ -13,9 +15,11 @@ AudioSubSystem::AudioSubSystem()
 {
 }
 
-bool AudioSubSystem::Setup()
+bool AudioSubSystem::Setup(AAssetManager* assetManager)
 {
     bool success = false;
+    AAssetDir* audioDir = nullptr;
+
     aout << "Initializing audio sub-system..." << std::endl;
 
     do
@@ -55,11 +59,48 @@ bool AudioSubSystem::Setup()
             break;
         }
 
+        audioDir = AAssetManager_openDir(assetManager, "audio");
+        if(!audioDir)
+        {
+            aout << "Failed to open audio directory." << std::endl;
+            break;
+        }
+
+#if 0           // TODO: Re-enable this once I have a .WAV file reader that works.
+        bool loadFailureOccurred = false;
+        while(true)
+        {
+            const char* audioFile = AAssetDir_getNextFileName(audioDir);
+            if(!audioFile)
+                break;
+
+            char audioFilePath[128];
+            sprintf(audioFilePath, "audio/%s", audioFile);
+
+            auto audioClip = new AudioClip();
+            this->audioClipArray.push_back(audioClip);
+            if(!audioClip->Load(audioFilePath, assetManager))
+            {
+                loadFailureOccurred = true;
+                break;
+            }
+        }
+
+        if(loadFailureOccurred)
+        {
+            aout << "Failed to load all audio clips." << std::endl;
+            break;
+        }
+#endif
+
         this->systemSetup = true;
         success = true;
         aout << "Audio sub-system successfully initialized!" << std::endl;
     }
     while(false);
+
+    if(audioDir)
+        AAssetDir_close(audioDir);
 
     if(!success)
         this->Shutdown();
@@ -70,6 +111,11 @@ bool AudioSubSystem::Setup()
 bool AudioSubSystem::Shutdown()
 {
     aout << "Shutting down audio sub-system..." << std::endl;
+
+    for(auto audioClip : this->audioClipArray)
+        delete audioClip;
+
+    this->audioClipArray.clear();
 
     if(this->audioStream)
     {
@@ -82,8 +128,90 @@ bool AudioSubSystem::Shutdown()
     return true;
 }
 
-void AudioSubSystem::PlayFX(SoundFX soundFX)
+void AudioSubSystem::PlayFX(SoundFXType soundFXType)
 {
+}
+
+//------------------------------ AudioSubSystem::AudioClip ------------------------------
+
+AudioSubSystem::AudioClip::AudioClip()
+{
+    this->bitsPerSample = 0;
+    this->numChannels = 0;
+    this->numFrames = 0;
+    this->sampleRate = 0;
+    this->waveBuf = nullptr;
+}
+
+/*virtual*/ AudioSubSystem::AudioClip::~AudioClip()
+{
+    this->Unload();
+}
+
+void AudioSubSystem::AudioClip::Unload()
+{
+    if(this->waveBuf)
+    {
+        delete[] this->waveBuf;
+        this->waveBuf = nullptr;
+    }
+
+    this->bitsPerSample = 0;
+    this->numChannels = 0;
+    this->numFrames = 0;
+    this->sampleRate = 0;
+}
+
+bool AudioSubSystem::AudioClip::Load(const char* audioFilePath, AAssetManager* assetManager)
+{
+    bool success = false;
+    AAsset* audioAsset = nullptr;
+
+    do
+    {
+        this->Unload();
+
+        audioAsset = AAssetManager_open(assetManager, audioFilePath, AASSET_MODE_BUFFER);
+        if (!audioAsset)
+            break;
+
+        int audioAssetSize = AAsset_getLength(audioAsset);
+        if (audioAssetSize == 0)
+            break;
+
+        const unsigned char* audioAssetBuf = static_cast<const unsigned char*>(AAsset_getBuffer(audioAsset));
+        parselib::MemInputStream inputStream((unsigned char*)audioAssetBuf, audioAssetSize);
+        parselib::WavStreamReader wavReader(&inputStream);
+
+        // Uh...how do we know if we succeeded or failed here?
+        wavReader.parse();
+
+        // TODO: This crashes because no data chunk was found in the .WAV file.
+        //       Either I need to make more tranditional .WAV files, or maybe I need
+        //       to bite the bullet and write my own .WAV file reader.
+        this->numFrames = wavReader.getNumSampleFrames();
+        if(this->numFrames <= 0)
+            break;
+
+        this->bitsPerSample = wavReader.getBitsPerSample();
+        this->numChannels = wavReader.getNumChannels();
+        this->sampleRate = wavReader.getSampleRate();
+        this->waveBuf = new float[this->numFrames];
+        int numFramesRead = wavReader.getDataFloat(this->waveBuf, this->numFrames);
+        if(numFramesRead != this->numFrames)
+            break;
+
+        success = true;
+    }
+    while(false);
+
+    if(audioAsset)
+        AAsset_close(audioAsset);
+
+    if(!success)
+        this->Unload();
+
+    return success;
 }
 
 //------------------------------ AudioSubSystem::AudioFeeder ------------------------------

@@ -173,7 +173,7 @@ bool Game::Setup()
         return false;
     }
 
-    if(this->options.audio && !this->audioSubSystem.Setup())
+    if(this->options.audio && !this->audioSubSystem.Setup(this->app->activity->assetManager))
     {
         aout << "Failed to initialize the audio sub-system." << std::endl;
         return false;

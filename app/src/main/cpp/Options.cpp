@@ -53,7 +53,9 @@ bool Options::Load(android_app* app)
 
     const char* optionsJsonBuf = (const char*)AAsset_getBuffer(optionsAsset);
     int optionsJsonBufSize = AAsset_getLength(optionsAsset);
-    return this->LoadFromString(optionsJsonBuf, optionsJsonBufSize);
+    bool optionsLoaded = this->LoadFromString(optionsJsonBuf, optionsJsonBufSize);
+    AAsset_close(optionsAsset);
+    return optionsLoaded;
 }
 
 bool Options::LoadFromString(const char* optionsJsonBuf, int optionsJsonBufSize)

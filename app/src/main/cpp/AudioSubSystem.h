@@ -1,7 +1,8 @@
 #pragma once
 
 #include <oboe/Oboe.h>
-#include <wav/WavStreamReader.h>
+#include <android/asset_manager.h>
+#include <vector>
 
 // This is the abstraction layer between our game software and the underlying audio library.
 class AudioSubSystem
@@ -10,21 +11,34 @@ public:
     AudioSubSystem();
     virtual ~AudioSubSystem();
 
-    bool Setup();
+    bool Setup(AAssetManager* assetManager);
     bool Shutdown();
 
-    enum SoundFX
+    enum SoundFXType
     {
-        GOOD_BLOCK_TOUCHED,
-        GOOD_BLOCK_RESET,
-        ALL_GOOD_BLOCKS_RESET,
-        LEVEL_SOLVED,
-        EVIL_QUEEN_DESTROYED
+        GOOD_OUTCOME,
+        BAD_OUTCOME
     };
 
-    void PlayFX(SoundFX soundFX);
+    void PlayFX(SoundFXType soundFXType);
 
 private:
+
+    class AudioClip
+    {
+    public:
+        AudioClip();
+        virtual ~AudioClip();
+
+        bool Load(const char* audioFilePath, AAssetManager* assetManager);
+        void Unload();
+
+        int bitsPerSample;
+        int numChannels;
+        int numFrames;
+        int sampleRate;
+        float* waveBuf;
+    };
 
     class AudioFeeder : public oboe::AudioStreamCallback
     {
@@ -38,4 +52,5 @@ private:
     bool systemSetup;
     oboe::AudioStream* audioStream;
     AudioFeeder audioFeeder;
+    std::vector<AudioClip*> audioClipArray;
 };
