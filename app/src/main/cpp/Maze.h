@@ -21,7 +21,7 @@ public:
     Maze();
     virtual ~Maze();
 
-    bool Generate(int rows, int cols);
+    bool Generate(int rows, int cols, int seedModifier);
     void PopulatePhysicsWorld(PlanarPhysics::Engine* engine, int touches, bool queen, double bounceFactor) const;
     void Clear();
 

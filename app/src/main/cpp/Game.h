@@ -30,6 +30,7 @@ public:
     void Render();
     bool Tick();
     void HandleSensorEvent(void* data);
+    void SaveProgress();
 
     enum
     {

@@ -21,6 +21,7 @@ void Progress::Reset()
 {
     this->level = 0;
     this->touches = 0;
+    this->seedModifier = (int)::time(nullptr);
 }
 
 bool Progress::Load(android_app* app)
@@ -73,8 +74,16 @@ bool Progress::Load(android_app* app)
         return false;
     }
 
+    JsonInt* jsonSeedModifier = dynamic_cast<JsonInt*>(jsonObject->GetValue("seed_mod"));
+    if(!jsonSeedModifier)
+    {
+        aout << "No seed modifier found in progress object." << std::endl;
+        return false;
+    }
+
     this->level = jsonLevel->GetValue();
     this->touches = jsonTouches->GetValue();
+    this->seedModifier = jsonSeedModifier->GetValue();
     return true;
 }
 
@@ -92,6 +101,7 @@ bool Progress::Save(android_app* app)
     std::shared_ptr<JsonObject> jsonObject(new JsonObject());
     jsonObject->SetValue("level", new JsonInt(this->level));
     jsonObject->SetValue("touches", new JsonInt(this->touches));
+    jsonObject->SetValue("seed_mod", new JsonInt(this->seedModifier));
 
     std::string jsonString;
     if(!jsonObject->PrintJson(jsonString))
@@ -131,4 +141,9 @@ int Progress::GetTouches() const
 void Progress::SetTouches(int touches)
 {
     this->touches = touches;
+}
+
+int Progress::GetSeedModifier() const
+{
+    return this->seedModifier;
 }

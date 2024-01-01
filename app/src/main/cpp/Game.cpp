@@ -62,7 +62,17 @@ Game::Game(android_app* app)
         case APP_CMD_TERM_WINDOW:
         {
             if(game)
+            {
+                game->SaveProgress();
                 game->ShutdownWindow();
+            }
+
+            break;
+        }
+        case APP_CMD_DESTROY:
+        {
+            if(game)
+                game->SaveProgress();
 
             break;
         }
@@ -71,6 +81,12 @@ Game::Game(android_app* app)
             break;
         }
     }
+}
+
+void Game::SaveProgress()
+{
+    this->progress.SetTouches(this->physicsWorld.GetGoodMazeBlockTouchedCount());
+    this->progress.Save(app);
 }
 
 // TODO: Tunnelling is an issue.  Perhaps the best way to solve it is to binary search for
@@ -541,7 +557,10 @@ Game::GenerateMazeState::GenerateMazeState(Game* game) : State(game)
     maze.Clear();
 
     if(!progress.Load(this->game->app))
+    {
         aout << "Failed to load progress!" << std::endl;
+        progress.Reset();
+    }
 
     int level = progress.GetLevel();
     int rows = level + 5;
@@ -550,7 +569,7 @@ Game::GenerateMazeState::GenerateMazeState(Game* game) : State(game)
     aout << "Level " << level << " is a maze of size " << rows << " by " << cols << "." << std::endl;
 
     bool queen = (level == FINAL_GRAVITY_MAZE_LEVEL);
-    maze.Generate(rows, cols);
+    maze.Generate(rows, cols, progress.GetSeedModifier());
     maze.PopulatePhysicsWorld(&physicsEngine, progress.GetTouches(), queen, options.bounce);
 
     physicsEngine.accelerationDueToGravity = Vector2D(0.0, -options.gravity);
@@ -701,26 +720,24 @@ Game::PlayGameState::PlayGameState(Game* game) : State(game)
 
 /*virtual*/ void Game::PlayGameState::Leave()
 {
-    if(!this->game->physicsWorld.IsMazeSolved())
-        this->game->progress.SetTouches(this->game->physicsWorld.GetGoodMazeBlockTouchedCount());
-    else
-    {
-        MazeQueen* mazeQueen = this->game->physicsWorld.FindTheQueen();
-        if(!mazeQueen)
-            this->game->progress.SetLevel(this->game->progress.GetLevel() + 1);
-        else
-            this->game->progress.SetLevel(0);
-
-        this->game->progress.SetTouches(0);
-    }
-
-    this->game->progress.Save(this->game->app);
+    this->game->SaveProgress();
 }
 
 /*virtual*/ Game::State* Game::PlayGameState::Tick(double deltaTime)
 {
     if(this->game->physicsWorld.IsMazeSolved() || this->game->debugWinEntireGame)
+    {
+        MazeQueen* mazeQueen = this->game->physicsWorld.FindTheQueen();
+        if(!mazeQueen)
+            this->game->progress.SetLevel(this->game->progress.GetLevel() + 1);
+        else
+            this->game->progress.Reset();
+
+        this->game->progress.SetTouches(0);
+        this->game->progress.Save(this->game->app);
+
         return new FlyMazeOutState(this->game);
+    }
 
     return this;
 }

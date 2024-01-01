@@ -19,10 +19,13 @@ public:
     int GetTouches() const;
     void SetTouches(int touches);
 
+    int GetSeedModifier() const;
+
 private:
 
     void GetProgressFilepath(android_app* app, char* progressFilepath, int progressFilepathSize);
 
     int level;
     int touches;
+    int seedModifier;
 };

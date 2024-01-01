@@ -28,14 +28,14 @@ Maze::Maze()
     this->Clear();
 }
 
-bool Maze::Generate(int rows, int cols)
+bool Maze::Generate(int rows, int cols, int seedModifier)
 {
     this->Clear();
 
     this->rows = rows;
     this->cols = cols;
 
-    ::srand(rows * cols * cols);
+    ::srand(rows * cols * cols + seedModifier);
 
     Node*** matrix = new Node**[rows];
     for(int i = 0; i < rows; i++)
