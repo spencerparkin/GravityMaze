@@ -1,5 +1,6 @@
 #pragma once
 
+#include <game-activity/native_app_glue/android_native_app_glue.h>
 #include <EGL/egl.h>
 #include <memory>
 #include <android/sensor.h>
@@ -29,6 +30,7 @@ public:
     bool ShutdownWindow();
     bool Tick();
     void HandleSensorEvent(void* data);
+    void HandleTapEvents();
 
     enum
     {
@@ -133,6 +135,7 @@ public:
     };
 
     static void HandleAndroidCommand(android_app* app, int32_t cmd);
+    static bool MotionEventFilter(const GameActivityMotionEvent* motionEvent);
 
 private:
 

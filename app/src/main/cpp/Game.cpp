@@ -8,7 +8,6 @@
 #include "PlanarObjects/Wall.h"
 #include "PlanarObjects/Ball.h"
 #include "PlanarObjects/RigidBody.h"
-#include <game-activity/native_app_glue/android_native_app_glue.h>
 #include <android/window.h>
 #include <android/native_activity.h>
 #include <GLES3/gl3.h>
@@ -88,6 +87,12 @@ Game::Game(android_app* app)
     }
 }
 
+/*static*/ bool Game::MotionEventFilter(const GameActivityMotionEvent* motionEvent)
+{
+    int sourceClass = motionEvent->source & AINPUT_SOURCE_CLASS_MASK;
+    return sourceClass == AINPUT_SOURCE_CLASS_POINTER || sourceClass == AINPUT_SOURCE_CLASS_JOYSTICK;
+}
+
 // TODO: Tunnelling is an issue.  Perhaps the best way to solve it is to binary search for
 //       a more accurate time of impact in the physics engine, or to ray-cast from position
 //       to position to prevent jumping over a collision.  In any case, we should add a fail-
@@ -105,7 +110,7 @@ bool Game::Setup()
 
     this->app->userData = this;
 
-    android_app_set_key_event_filter(this->app, nullptr);
+    android_app_set_motion_event_filter(this->app, &Game::MotionEventFilter);
 
     // We need to do this, because the game doesn't take any input from swipes or touches.
     // TODO: Why doesn't this work?  :(
@@ -359,6 +364,37 @@ void Game::HandleSensorEvent(void* data)
     }
 }
 
+void Game::HandleTapEvents()
+{
+    struct android_input_buffer* inputBuffer = android_app_swap_input_buffers(this->app);
+    if (!inputBuffer)
+        return;
+
+    for (int i = 0; i < inputBuffer->motionEventsCount; i++)
+    {
+        GameActivityMotionEvent& motionEvent = inputBuffer->motionEvents[i];
+
+        /*
+        int j = (motionEvent.action & AMOTION_EVENT_ACTION_POINTER_INDEX_MASK) >> AMOTION_EVENT_ACTION_POINTER_INDEX_SHIFT;
+        GameActivityPointerAxes& pointer = motionEvent.pointers[j];
+        float x = GameActivityPointerAxes_getX(&pointer);
+        float y = GameActivityPointerAxes_getY(&pointer);
+         */
+
+        switch (motionEvent.action & AMOTION_EVENT_ACTION_MASK)
+        {
+            case AMOTION_EVENT_ACTION_DOWN:
+            {
+                this->audioSubSystem.PlayFX(AudioSubSystem::SoundFXType::GOOD_OUTCOME);
+
+                break;
+            }
+        }
+    }
+
+    android_app_clear_motion_events(inputBuffer);
+}
+
 bool Game::Tick()
 {
     clock_t currentTime = ::clock();
@@ -370,6 +406,8 @@ bool Game::Tick()
         frameRate = 1.0 / elapsedTime;
     }
     this->lastTime = currentTime;
+
+    this->HandleTapEvents();
 
     this->audioSubSystem.PumpAudio();
 
