@@ -371,6 +371,8 @@ bool Game::Tick()
     }
     this->lastTime = currentTime;
 
+    this->audioSubSystem.PumpAudio();
+
     void* data = nullptr;
     int events = 0;
     int id = ALooper_pollOnce(0, nullptr, &events, &data);

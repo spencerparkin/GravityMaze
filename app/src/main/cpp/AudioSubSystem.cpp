@@ -1,5 +1,8 @@
 #include "AudioSubSystem.h"
 #include "AndroidOut.h"
+#include "Math/Utilities/Random.h"
+
+using namespace AudioDataLib;
 
 //------------------------------ AudioSubSystem ------------------------------
 
@@ -7,6 +10,7 @@ AudioSubSystem::AudioSubSystem()
 {
     this->systemSetup = false;
     this->audioStream = nullptr;
+    this->audioFeeder = nullptr;
 }
 
 /*virtual*/ AudioSubSystem::~AudioSubSystem()
@@ -28,15 +32,18 @@ bool AudioSubSystem::Setup(AAssetManager* assetManager)
             break;
         }
 
+        this->audioFeeder = new AudioFeeder();
+
         oboe::AudioStreamBuilder builder;
 
         builder.setPerformanceMode(oboe::PerformanceMode::LowLatency);
         builder.setSharingMode(oboe::SharingMode::Exclusive);
-        builder.setCallback(&this->audioFeeder);
-        builder.setChannelCount(2);
-        builder.setFormat(oboe::AudioFormat::Float);
+        builder.setCallback(this->audioFeeder);
+        builder.setChannelCount(1);
         builder.setContentType(oboe::ContentType::Sonification);
         builder.setDirection(oboe::Direction::Output);
+        builder.setSampleRate(48000);
+        builder.setFormat(oboe::AudioFormat::I16);
 
         oboe::Result result = builder.openStream(&this->audioStream);
         if (result != oboe::Result::OK)
@@ -64,7 +71,6 @@ bool AudioSubSystem::Setup(AAssetManager* assetManager)
             break;
         }
 
-#if 0           // TODO: Re-enable this once I have a .WAV file reader that works.
         bool loadFailureOccurred = false;
         while(true)
         {
@@ -82,6 +88,13 @@ bool AudioSubSystem::Setup(AAssetManager* assetManager)
                 loadFailureOccurred = true;
                 break;
             }
+
+            if(strstr(audioFile, "GO_") == audioFile)
+                audioClip->type = SoundFXType::GOOD_OUTCOME;
+            else if(strstr(audioFile, "BO_") == audioFile)
+                audioClip->type = SoundFXType::BAD_OUTCOME;
+            else
+                audioClip->type = SoundFXType::UNKNOWN;
         }
 
         if(loadFailureOccurred)
@@ -89,7 +102,6 @@ bool AudioSubSystem::Setup(AAssetManager* assetManager)
             aout << "Failed to load all audio clips." << std::endl;
             break;
         }
-#endif
 
         this->systemSetup = true;
         success = true;
@@ -121,6 +133,12 @@ bool AudioSubSystem::Shutdown()
         this->audioStream = nullptr;
     }
 
+    if(this->audioFeeder)
+    {
+        delete this->audioFeeder;
+        this->audioFeeder = nullptr;
+    }
+
     this->systemSetup = false;
     aout << "Audio sub-system shutdown!" << std::endl;
     return true;
@@ -128,17 +146,28 @@ bool AudioSubSystem::Shutdown()
 
 void AudioSubSystem::PlayFX(SoundFXType soundFXType)
 {
+    std::vector<AudioClip*> possibleClipsArray;
+    for(AudioClip* audioClip : this->audioClipArray)
+        if(audioClip->type == soundFXType)
+            possibleClipsArray.push_back(audioClip);
+
+    int i = PlanarPhysics::Random::Integer(0, possibleClipsArray.size() - 1);
+    AudioClip* chosenClip = possibleClipsArray[i];
+    this->audioFeeder->audioSink.AddAudioInput(new AudioStream(chosenClip->audioData));
+}
+
+bool AudioSubSystem::PumpAudio()
+{
+    this->audioFeeder->audioSink.GenerateAudio(0.05, 0.05);
+    return true;
 }
 
 //------------------------------ AudioSubSystem::AudioClip ------------------------------
 
 AudioSubSystem::AudioClip::AudioClip()
 {
-    this->bitsPerSample = 0;
-    this->numChannels = 0;
-    this->numFrames = 0;
-    this->sampleRate = 0;
-    this->waveBuf = nullptr;
+    this->audioData = nullptr;
+    this->type = SoundFXType::UNKNOWN;
 }
 
 /*virtual*/ AudioSubSystem::AudioClip::~AudioClip()
@@ -148,22 +177,18 @@ AudioSubSystem::AudioClip::AudioClip()
 
 void AudioSubSystem::AudioClip::Unload()
 {
-    if(this->waveBuf)
+    if(this->audioData)
     {
-        delete[] this->waveBuf;
-        this->waveBuf = nullptr;
+        delete this->audioData;
+        this->audioData = nullptr;
     }
-
-    this->bitsPerSample = 0;
-    this->numChannels = 0;
-    this->numFrames = 0;
-    this->sampleRate = 0;
 }
 
 bool AudioSubSystem::AudioClip::Load(const char* audioFilePath, AAssetManager* assetManager)
 {
     bool success = false;
     AAsset* audioAsset = nullptr;
+    WaveFormat waveFormat;
 
     do
     {
@@ -178,7 +203,17 @@ bool AudioSubSystem::AudioClip::Load(const char* audioFilePath, AAssetManager* a
             break;
 
         const unsigned char* audioAssetBuf = static_cast<const unsigned char*>(AAsset_getBuffer(audioAsset));
-        break;  // TODO: Write remainder of loader here.
+        BufferStream inputStream(audioAssetBuf, audioAssetSize);
+
+        std::string error;
+        if(!waveFormat.ReadFromStream(inputStream, this->audioData, error))
+            break;
+
+        // Make sure the format is what we expect to process on the stream.
+        const AudioData::Format& format = this->audioData->GetFormat();
+        assert(format.numChannels == 1);
+        assert(format.bitsPerSample == 16);
+        assert(format.framesPerSecond == 48000);
 
         success = true;
     }
@@ -195,28 +230,54 @@ bool AudioSubSystem::AudioClip::Load(const char* audioFilePath, AAssetManager* a
 
 //------------------------------ AudioSubSystem::AudioFeeder ------------------------------
 
-AudioSubSystem::AudioFeeder::AudioFeeder()
+AudioSubSystem::AudioFeeder::AudioFeeder() : audioSink(true)
 {
+    auto mutex = new AudioMutex();
+
+    // Note that this matches the audio stream we opened with Oboe,
+    // and it matches the format of the audio files we'll be loading
+    // from disk.
+    AudioData::Format format;
+    format.bitsPerSample = 16;
+    format.framesPerSecond = 48000;
+    format.numChannels = 1;
+
+    this->audioSink.SetAudioOutput(new ThreadSafeAudioStream(format, mutex, true));
 }
 
 /*virtual*/ AudioSubSystem::AudioFeeder::~AudioFeeder()
 {
 }
 
-// Note: This is probably be called on a thread other than the main thread!
+// Note: This is called on a thread other than the main thread!
 /*virtual*/ oboe::DataCallbackResult AudioSubSystem::AudioFeeder::onAudioReady(oboe::AudioStream* audioStream, void* audioData, int32_t numAudioFrames)
 {
-    int bytesPerFrame = audioStream->getBytesPerFrame();
-    int bytesPerSample = audioStream->getBytesPerSample();
-    int samplesPerFrameOrNumChannels = bytesPerFrame / bytesPerSample;
-    int numAudioSamples = numAudioFrames / samplesPerFrameOrNumChannels;
-
-    if(bytesPerSample == sizeof(float))
-    {
-        float* sampleBuffer = static_cast<float*>(audioData);
-        for (int i = 0; i < numAudioSamples; i++)
-            sampleBuffer[i] = 0.0;      // Just write silence for now.
-    }
+    int16_t* sampleBuffer = static_cast<int16_t*>(audioData);
+    uint64_t numBytesRead = this->audioSink.GetAudioOutput()->ReadBytesFromStream((uint8_t*)sampleBuffer, numAudioFrames);
+    for(uint64_t i = numBytesRead; i < (uint64_t)numAudioFrames; i++)
+        sampleBuffer[i] = 0;
 
     return oboe::DataCallbackResult::Continue;
+}
+
+//------------------------------ AudioSubSystem::AudioMutex ------------------------------
+
+AudioSubSystem::AudioMutex::AudioMutex()
+{
+    pthread_mutex_init(&this->mutex, nullptr);
+}
+
+/*virtual*/ AudioSubSystem::AudioMutex::~AudioMutex()
+{
+    pthread_mutex_destroy(&this->mutex);
+}
+
+/*virtual*/ void AudioSubSystem::AudioMutex::Lock()
+{
+    pthread_mutex_lock(&this->mutex);
+}
+
+/*virtual*/ void AudioSubSystem::AudioMutex::Unlock()
+{
+    pthread_mutex_unlock(&this->mutex);
 }

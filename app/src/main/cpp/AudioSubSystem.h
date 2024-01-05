@@ -5,6 +5,7 @@
 #include <AudioData.h>
 #include <WaveFormat.h>
 #include <Mutex.h>
+#include <AudioSink.h>
 #include <android/asset_manager.h>
 #include <vector>
 
@@ -17,9 +18,11 @@ public:
 
     bool Setup(AAssetManager* assetManager);
     bool Shutdown();
+    bool PumpAudio();
 
-    enum SoundFXType
+    enum class SoundFXType
     {
+        UNKNOWN,
         GOOD_OUTCOME,
         BAD_OUTCOME
     };
@@ -27,6 +30,19 @@ public:
     void PlayFX(SoundFXType soundFXType);
 
 private:
+
+    class AudioMutex : public AudioDataLib::Mutex
+    {
+    public:
+        AudioMutex();
+        virtual ~AudioMutex();
+
+        virtual void Lock() override;
+        virtual void Unlock() override;
+
+    private:
+        mutable pthread_mutex_t mutex;
+    };
 
     class AudioClip
     {
@@ -37,11 +53,8 @@ private:
         bool Load(const char* audioFilePath, AAssetManager* assetManager);
         void Unload();
 
-        int bitsPerSample;
-        int numChannels;
-        int numFrames;
-        int sampleRate;
-        float* waveBuf;
+        AudioDataLib::AudioData* audioData;
+        SoundFXType type;
     };
 
     class AudioFeeder : public oboe::AudioStreamCallback
@@ -51,10 +64,12 @@ private:
         virtual ~AudioFeeder();
 
         virtual oboe::DataCallbackResult onAudioReady(oboe::AudioStream* audioStream, void* audioData, int32_t numAudioFrames) override;
+
+        AudioDataLib::AudioSink audioSink;
     };
 
     bool systemSetup;
     oboe::AudioStream* audioStream;
-    AudioFeeder audioFeeder;
+    AudioFeeder* audioFeeder;
     std::vector<AudioClip*> audioClipArray;
 };
