@@ -15,6 +15,10 @@ file(GLOB_RECURSE ParsePartySources CONFIGURE_DEPENDS
         "ParseParty/Source/*.h"
         "ParseParty/Source/*.cpp")
 
+file(GLOB_RECURSE AudioDataLibSources CONFIGURE_DEPENDS
+        "AudioDataLib/Source/*.h"
+        "AudioDataLib/Source/*.cpp")
+
 # Creates your game shared library. The name must be the same as the
 # one used for loading in your Kotlin/Java or AndroidManifest.txt files.
 add_library(gravitymaze SHARED
@@ -37,11 +41,13 @@ add_library(gravitymaze SHARED
         MazeObjects/MazeWorm.cpp
         MazeObjects/MazeQueen.cpp
         ${PlanarPhysicsSources}
-        ${ParsePartySources})
+        ${ParsePartySources}
+        ${AudioDataLibSources})
 
 target_include_directories(gravitymaze PRIVATE
         "PlanarPhysics/Engine/Source"
         "ParseParty/Source"
+        "AudioDataLib/Source"
         "oboe/include")
 
 # Searches for a package provided by the game activity dependency
