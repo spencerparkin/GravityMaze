@@ -1,6 +1,10 @@
 #pragma once
 
 #include <oboe/Oboe.h>
+#include <ByteStream.h>
+#include <AudioData.h>
+#include <WaveFormat.h>
+#include <Mutex.h>
 #include <android/asset_manager.h>
 #include <vector>
 
