@@ -7,10 +7,6 @@ project("gravitymaze")
 
 add_subdirectory(oboe)
 
-set(PARSELIB_DIR oboe/samples/parselib)
-
-include(${PARSELIB_DIR}/src/main/cpp/CMakeLists.txt)
-
 file(GLOB_RECURSE PlanarPhysicsSources CONFIGURE_DEPENDS
         "PlanarPhysics/Engine/Source/*.h"
         "PlanarPhysics/Engine/Source/*.cpp")
@@ -46,8 +42,7 @@ add_library(gravitymaze SHARED
 target_include_directories(gravitymaze PRIVATE
         "PlanarPhysics/Engine/Source"
         "ParseParty/Source"
-        "oboe/include"
-        ${PARSELIB_DIR}/src/main/cpp)
+        "oboe/include")
 
 # Searches for a package provided by the game activity dependency
 find_package(game-activity REQUIRED CONFIG)
@@ -63,6 +58,5 @@ target_link_libraries(gravitymaze
         GLESv3
         jnigraphics
         android
-        parselib
         oboe
         log)

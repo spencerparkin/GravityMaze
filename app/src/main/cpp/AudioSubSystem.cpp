@@ -1,7 +1,5 @@
 #include "AudioSubSystem.h"
 #include "AndroidOut.h"
-#include <wav/WavStreamReader.h>
-#include <stream/MemInputStream.h>
 
 //------------------------------ AudioSubSystem ------------------------------
 
@@ -180,26 +178,7 @@ bool AudioSubSystem::AudioClip::Load(const char* audioFilePath, AAssetManager* a
             break;
 
         const unsigned char* audioAssetBuf = static_cast<const unsigned char*>(AAsset_getBuffer(audioAsset));
-        parselib::MemInputStream inputStream((unsigned char*)audioAssetBuf, audioAssetSize);
-        parselib::WavStreamReader wavReader(&inputStream);
-
-        // Uh...how do we know if we succeeded or failed here?
-        wavReader.parse();
-
-        // TODO: This crashes because no data chunk was found in the .WAV file.
-        //       Either I need to make more tranditional .WAV files, or maybe I need
-        //       to bite the bullet and write my own .WAV file reader.
-        this->numFrames = wavReader.getNumSampleFrames();
-        if(this->numFrames <= 0)
-            break;
-
-        this->bitsPerSample = wavReader.getBitsPerSample();
-        this->numChannels = wavReader.getNumChannels();
-        this->sampleRate = wavReader.getSampleRate();
-        this->waveBuf = new float[this->numFrames];
-        int numFramesRead = wavReader.getDataFloat(this->waveBuf, this->numFrames);
-        if(numFramesRead != this->numFrames)
-            break;
+        break;  // TODO: Write remainder of loader here.
 
         success = true;
     }
