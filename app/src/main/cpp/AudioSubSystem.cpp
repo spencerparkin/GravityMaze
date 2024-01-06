@@ -32,6 +32,8 @@ bool AudioSubSystem::Setup(AAssetManager* assetManager)
             break;
         }
 
+        this->audioFeeder = new AudioFeeder();
+
         oboe::AudioStreamBuilder builder;
 
         builder.setPerformanceMode(oboe::PerformanceMode::LowLatency);
@@ -41,6 +43,12 @@ bool AudioSubSystem::Setup(AAssetManager* assetManager)
         builder.setDirection(oboe::Direction::Output);
         builder.setFormatConversionAllowed(true);
         builder.setErrorCallback(&this->errorCallback);
+#if 1
+        builder.setChannelMask(oboe::ChannelMask::Mono);
+        builder.setChannelCount(oboe::ChannelCount::Mono);
+        builder.setSampleRate(48000);
+        builder.setFormat(oboe::AudioFormat::I16);
+#endif
 
         oboe::Result result = builder.openStream(&this->audioStream);
         if (result != oboe::Result::OK)
@@ -50,7 +58,6 @@ bool AudioSubSystem::Setup(AAssetManager* assetManager)
             break;
         }
 
-        this->audioFeeder = new AudioFeeder();
         if(!this->audioFeeder->Configure(this->audioStream))
         {
             aout << "Could not configure our audio sink based on the given audio stream." << std::endl;
@@ -306,7 +313,7 @@ bool AudioSubSystem::AudioFeeder::Configure(oboe::AudioStream* audioStream)
 /*virtual*/ oboe::DataCallbackResult AudioSubSystem::AudioFeeder::onAudioReady(oboe::AudioStream* audioStream, void* audioData, int32_t numAudioFrames)
 {
     const AudioData::Format& format = this->audioSink.GetAudioOutput()->GetFormat();
-    uint32_t numBytesNeeded = format.BytesPerFrame() * numAudioFrames;
+    uint64_t numBytesNeeded = format.BytesPerFrame() * uint64_t(numAudioFrames);
     uint64_t numBytesRead = this->audioSink.GetAudioOutput()->ReadBytesFromStream((uint8_t*)audioData, numBytesNeeded);
     for(uint64_t i = numBytesRead; i < (uint64_t)numBytesNeeded; i++)
         ((uint8_t*)audioData)[i] = 0;
