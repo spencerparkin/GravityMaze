@@ -45,6 +45,8 @@ bool AudioSubSystem::Setup(AAssetManager* assetManager)
         builder.setDirection(oboe::Direction::Output);
         builder.setSampleRate(48000);
         builder.setFormat(oboe::AudioFormat::I16);
+        builder.setFormatConversionAllowed(true);
+        builder.setErrorCallback(&this->errorCallback);
 
         oboe::Result result = builder.openStream(&this->audioStream);
         if (result != oboe::Result::OK)
@@ -170,6 +172,25 @@ bool AudioSubSystem::PumpAudio()
     return true;
 }
 
+//------------------------------ AudioSubSystem::ErrorCallback ------------------------------
+
+AudioSubSystem::ErrorCallback::ErrorCallback()
+{
+}
+
+/*virtual*/ AudioSubSystem::ErrorCallback::~ErrorCallback()
+{
+}
+
+/*virtual*/ bool AudioSubSystem::ErrorCallback::onError(oboe::AudioStream* audioStream, oboe::Result result)
+{
+    aout << "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" << std::endl;
+    aout << "Audio error: " << oboe::convertToText(result) << std::endl;
+    aout << "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" << std::endl;
+
+    return false;
+}
+
 //------------------------------ AudioSubSystem::AudioClip ------------------------------
 
 AudioSubSystem::AudioClip::AudioClip()
@@ -187,7 +208,7 @@ void AudioSubSystem::AudioClip::Unload()
 {
     if(this->audioData)
     {
-        delete this->audioData;
+        AudioData::Destroy(this->audioData);
         this->audioData = nullptr;
     }
 }

@@ -8,6 +8,7 @@
 #include <AudioSink.h>
 #include <android/asset_manager.h>
 #include <vector>
+#include <oboe/AudioStreamCallback.h>
 
 // This is the abstraction layer between our game software and the underlying audio library.
 class AudioSubSystem
@@ -30,6 +31,15 @@ public:
     void PlayFX(SoundFXType soundFXType);
 
 private:
+
+    class ErrorCallback : public oboe::AudioStreamErrorCallback
+    {
+    public:
+        ErrorCallback();
+        virtual ~ErrorCallback();
+
+        virtual bool onError(oboe::AudioStream* audioStream, oboe::Result result) override;
+    };
 
     class AudioMutex : public AudioDataLib::Mutex
     {
@@ -72,4 +82,5 @@ private:
     oboe::AudioStream* audioStream;
     AudioFeeder* audioFeeder;
     std::vector<AudioClip*> audioClipArray;
+    ErrorCallback errorCallback;
 };
