@@ -43,7 +43,7 @@ bool AudioSubSystem::Setup(AAssetManager* assetManager)
         builder.setDirection(oboe::Direction::Output);
         builder.setFormatConversionAllowed(true);
         builder.setErrorCallback(&this->errorCallback);
-#if 1
+#if 0
         builder.setChannelMask(oboe::ChannelMask::Mono);
         builder.setChannelCount(oboe::ChannelCount::Mono);
         builder.setSampleRate(48000);
