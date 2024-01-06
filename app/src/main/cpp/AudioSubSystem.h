@@ -3,7 +3,7 @@
 #include <oboe/Oboe.h>
 #include <ByteStream.h>
 #include <AudioData.h>
-#include <WaveFormat.h>
+#include <WaveFileFormat.h>
 #include <Mutex.h>
 #include <AudioSink.h>
 #include <android/asset_manager.h>
@@ -72,6 +72,8 @@ private:
     public:
         AudioFeeder();
         virtual ~AudioFeeder();
+
+        bool Configure(oboe::AudioStream* audioStream);
 
         virtual oboe::DataCallbackResult onAudioReady(oboe::AudioStream* audioStream, void* audioData, int32_t numAudioFrames) override;
 

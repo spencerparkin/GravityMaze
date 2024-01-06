@@ -32,19 +32,13 @@ bool AudioSubSystem::Setup(AAssetManager* assetManager)
             break;
         }
 
-        this->audioFeeder = new AudioFeeder();
-
         oboe::AudioStreamBuilder builder;
 
         builder.setPerformanceMode(oboe::PerformanceMode::LowLatency);
         builder.setSharingMode(oboe::SharingMode::Shared);
         builder.setCallback(this->audioFeeder);
-        builder.setChannelMask(oboe::ChannelMask::Mono);
-        builder.setChannelCount(oboe::ChannelCount::Mono);
-        builder.setContentType(oboe::ContentType::Music);
+        builder.setContentType(oboe::ContentType::Sonification);
         builder.setDirection(oboe::Direction::Output);
-        builder.setSampleRate(48000);
-        builder.setFormat(oboe::AudioFormat::I16);
         builder.setFormatConversionAllowed(true);
         builder.setErrorCallback(&this->errorCallback);
 
@@ -56,14 +50,12 @@ bool AudioSubSystem::Setup(AAssetManager* assetManager)
             break;
         }
 
-        int sampleRate = this->audioStream->getSampleRate();
-        int numChannels = this->audioStream->getChannelCount();
-        int bitDepth = this->audioStream->getBytesPerSample() * 8;
-        oboe::AudioFormat format = this->audioStream->getFormat();
-        aout << "Audio stream sample rate: " << sampleRate << std::endl;
-        aout << "Audio stream bit depth: " << bitDepth << std::endl;
-        aout << "Audio stream channels: " << numChannels << std::endl;
-        aout << "Audio stream format: " << oboe::convertToText(format) << std::endl;
+        this->audioFeeder = new AudioFeeder();
+        if(!this->audioFeeder->Configure(this->audioStream))
+        {
+            aout << "Could not configure our audio sink based on the given audio stream." << std::endl;
+            break;
+        }
 
         int bufferSizeFrames = this->audioStream->getFramesPerBurst() * 2;
         this->audioStream->setBufferSizeInFrames(bufferSizeFrames);
@@ -219,7 +211,7 @@ bool AudioSubSystem::AudioClip::Load(const char* audioFilePath, AAssetManager* a
 {
     bool success = false;
     AAsset* audioAsset = nullptr;
-    WaveFormat waveFormat;
+    WaveFileFormat waveFileFormat;
 
     do
     {
@@ -237,7 +229,7 @@ bool AudioSubSystem::AudioClip::Load(const char* audioFilePath, AAssetManager* a
         BufferStream inputStream(audioAssetBuf, audioAssetSize);
 
         std::string error;
-        if(!waveFormat.ReadFromStream(inputStream, this->audioData, error))
+        if(!waveFileFormat.ReadFromStream(inputStream, this->audioData, error))
             break;
 
         // Make sure the format is what we expect to process on the stream.
@@ -245,6 +237,7 @@ bool AudioSubSystem::AudioClip::Load(const char* audioFilePath, AAssetManager* a
         assert(format.numChannels == 1);
         assert(format.bitsPerSample == 16);
         assert(format.framesPerSecond == 48000);
+        assert(format.sampleType == AudioData::Format::SIGNED_INTEGER);
 
         success = true;
     }
@@ -263,34 +256,60 @@ bool AudioSubSystem::AudioClip::Load(const char* audioFilePath, AAssetManager* a
 
 AudioSubSystem::AudioFeeder::AudioFeeder() : audioSink(true)
 {
-    auto mutex = new AudioMutex();
-
-    // Note that this matches the audio stream we opened with Oboe,
-    // and it matches the format of the audio files we'll be loading
-    // from disk.
-    AudioData::Format format;
-    format.bitsPerSample = 16;
-    format.framesPerSecond = 48000;
-    format.numChannels = 1;
-
-    this->audioSink.SetAudioOutput(new ThreadSafeAudioStream(format, mutex, true));
 }
 
 /*virtual*/ AudioSubSystem::AudioFeeder::~AudioFeeder()
 {
 }
 
+bool AudioSubSystem::AudioFeeder::Configure(oboe::AudioStream* audioStream)
+{
+    int sampleRate = audioStream->getSampleRate();
+    int numChannels = audioStream->getChannelCount();
+    int bitDepth = audioStream->getBytesPerSample() * 8;
+    oboe::AudioFormat sampleFormat = audioStream->getFormat();
+
+    aout << "Audio stream sample rate: " << sampleRate << std::endl;
+    aout << "Audio stream bit depth: " << bitDepth << std::endl;
+    aout << "Audio stream channels: " << numChannels << std::endl;
+    aout << "Audio stream format: " << oboe::convertToText(sampleFormat) << std::endl;
+
+    AudioData::Format audioDataFormat;
+    audioDataFormat.bitsPerSample = bitDepth;
+    audioDataFormat.framesPerSecond = sampleRate;
+    audioDataFormat.numChannels = numChannels;
+
+    switch(sampleFormat)
+    {
+        case oboe::AudioFormat::Float:
+        {
+            audioDataFormat.sampleType = AudioData::Format::FLOAT;
+            break;
+        }
+        case oboe::AudioFormat::I16:
+        case oboe::AudioFormat::I32:
+        {
+            audioDataFormat.sampleType = AudioData::Format::SIGNED_INTEGER;
+            break;
+        }
+        default:
+        {
+            return false;
+        }
+    }
+
+    this->audioSink.SetAudioOutput(new ThreadSafeAudioStream(audioDataFormat, new AudioMutex(), true));
+    return true;
+}
+
 // Note: This is called on a thread other than the main thread!
 /*virtual*/ oboe::DataCallbackResult AudioSubSystem::AudioFeeder::onAudioReady(oboe::AudioStream* audioStream, void* audioData, int32_t numAudioFrames)
 {
-    int __sampleRate = audioStream->getSampleRate();
-    int __numChannels = audioStream->getChannelCount();
-    int __bitDepth = audioStream->getBytesPerSample() * 8;
-
-    int16_t* sampleBuffer = static_cast<int16_t*>(audioData);
-    uint64_t numBytesRead = this->audioSink.GetAudioOutput()->ReadBytesFromStream((uint8_t*)sampleBuffer, numAudioFrames);
-    for(uint64_t i = numBytesRead; i < (uint64_t)numAudioFrames; i++)
-        sampleBuffer[i] = 0;
+    const AudioData::Format& format = this->audioSink.GetAudioOutput()->GetFormat();
+    uint32_t numBytesNeeded = format.BytesPerFrame() * numAudioFrames;
+    uint64_t numBytesRead = this->audioSink.GetAudioOutput()->ReadBytesFromStream((uint8_t*)audioData, numBytesNeeded);
+    for(uint64_t i = numBytesRead; i < (uint64_t)numBytesNeeded; i++)
+        ((uint8_t*)audioData)[i] = 0;
 
     return oboe::DataCallbackResult::Continue;
 }
