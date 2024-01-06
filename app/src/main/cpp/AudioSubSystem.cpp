@@ -39,8 +39,9 @@ bool AudioSubSystem::Setup(AAssetManager* assetManager)
         builder.setPerformanceMode(oboe::PerformanceMode::LowLatency);
         builder.setSharingMode(oboe::SharingMode::Exclusive);
         builder.setCallback(this->audioFeeder);
-        builder.setChannelCount(1);
-        builder.setContentType(oboe::ContentType::Sonification);
+        builder.setChannelMask(oboe::ChannelMask::Mono);
+        builder.setChannelCount(oboe::ChannelCount::Mono);
+        builder.setContentType(oboe::ContentType::Music);
         builder.setDirection(oboe::Direction::Output);
         builder.setSampleRate(48000);
         builder.setFormat(oboe::AudioFormat::I16);
@@ -52,6 +53,13 @@ bool AudioSubSystem::Setup(AAssetManager* assetManager)
             aout << "Reason: " << oboe::convertToText(result) << std::endl;
             break;
         }
+
+        int sampleRate = this->audioStream->getSampleRate();
+        int numChannels = this->audioStream->getChannelCount();
+        int bitDepth = this->audioStream->getBytesPerSample() * 8;
+        aout << "Audio stream sample rate: " << sampleRate << std::endl;
+        aout << "Audio stream bit depth: " << bitDepth << std::endl;
+        aout << "Audio stream channels: " << numChannels << std::endl;
 
         int bufferSizeFrames = this->audioStream->getFramesPerBurst() * 2;
         this->audioStream->setBufferSizeInFrames(bufferSizeFrames);
@@ -252,6 +260,10 @@ AudioSubSystem::AudioFeeder::AudioFeeder() : audioSink(true)
 // Note: This is called on a thread other than the main thread!
 /*virtual*/ oboe::DataCallbackResult AudioSubSystem::AudioFeeder::onAudioReady(oboe::AudioStream* audioStream, void* audioData, int32_t numAudioFrames)
 {
+    int __sampleRate = audioStream->getSampleRate();
+    int __numChannels = audioStream->getChannelCount();
+    int __bitDepth = audioStream->getBytesPerSample() * 8;
+
     int16_t* sampleBuffer = static_cast<int16_t*>(audioData);
     uint64_t numBytesRead = this->audioSink.GetAudioOutput()->ReadBytesFromStream((uint8_t*)sampleBuffer, numAudioFrames);
     for(uint64_t i = numBytesRead; i < (uint64_t)numAudioFrames; i++)
