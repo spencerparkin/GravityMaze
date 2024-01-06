@@ -1,6 +1,12 @@
 package com.spencer.gravitymaze
 
 import android.view.View
+import android.content.Context;
+import android.os.Handler
+import android.os.Looper
+import android.media.midi.MidiDeviceInfo;
+import android.media.midi.MidiDevice;
+import android.media.midi.MidiManager;
 import com.google.androidgamesdk.GameActivity
 
 class MainActivity : GameActivity() {
@@ -8,6 +14,28 @@ class MainActivity : GameActivity() {
         init {
             System.loadLibrary("gravitymaze")
         }
+    }
+
+    fun openMidiDevice(): MidiDevice? {
+        val midiManager = this.getSystemService(Context.MIDI_SERVICE) as MidiManager
+        //val deviceInfoArray = midiManager.getDevicesForTransport(MidiManager.TRANSPORT_MIDI_BYTE_STREAM)
+        val deviceInfoArray = midiManager.devices
+        var openedDevice: MidiDevice? = null
+        for(deviceInfo in deviceInfoArray) {
+            if(deviceInfo.getOutputPortCount() > 0) {
+                midiManager.openDevice(deviceInfo, { device ->
+                    openedDevice = device
+                }, Handler(Looper.getMainLooper()))
+                break
+            }
+        }
+
+        return openedDevice
+    }
+
+    fun closeMidiDevice(openedDevice: MidiDevice) {
+        //val midiManager = this.getSystemService(Context.MIDI_SERVICE) as MidiManager
+        openedDevice.close();
     }
 
     fun gameActivityFinished() {
