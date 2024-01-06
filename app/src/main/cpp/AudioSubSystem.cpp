@@ -311,7 +311,15 @@ AudioSubSystem::AudioMutex::AudioMutex()
 
 /*virtual*/ void AudioSubSystem::AudioMutex::Lock()
 {
-    pthread_mutex_lock(&this->mutex);
+    // The spin-wait here is being used to avoid preemption and may
+    // be justified since we should *never* have to wait very long
+    // for the lock to become available.
+    while(true)
+    {
+        int result = pthread_mutex_trylock(&this->mutex);
+        if(result == 0)
+            break;
+    }
 }
 
 /*virtual*/ void AudioSubSystem::AudioMutex::Unlock()
