@@ -270,11 +270,7 @@ AudioSubSystem::AudioFeeder::AudioFeeder() : audioSink(true)
     format.bitsPerSample = 16;
     format.framesPerSecond = 48000;
     format.numChannels = 1;
-
-    // TODO: Switch over to a lock-free audio stream and see if this helps things.
-    //       An easy way to do a lock-free queue is to use atomic increments and
-    //       decrements for the stream bounds, and let the users read or write one
-    //       byte at a time.  Convenience functions could hide this tedium.
+    
     this->audioSink.SetAudioOutput(new ThreadSafeAudioStream(format, mutex, true));
 }
 
