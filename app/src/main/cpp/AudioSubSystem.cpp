@@ -59,9 +59,11 @@ bool AudioSubSystem::Setup(AAssetManager* assetManager)
         int sampleRate = this->audioStream->getSampleRate();
         int numChannels = this->audioStream->getChannelCount();
         int bitDepth = this->audioStream->getBytesPerSample() * 8;
+        oboe::AudioFormat format = this->audioStream->getFormat();
         aout << "Audio stream sample rate: " << sampleRate << std::endl;
         aout << "Audio stream bit depth: " << bitDepth << std::endl;
         aout << "Audio stream channels: " << numChannels << std::endl;
+        aout << "Audio stream format: " << oboe::convertToText(format) << std::endl;
 
         int bufferSizeFrames = this->audioStream->getFramesPerBurst() * 2;
         this->audioStream->setBufferSizeInFrames(bufferSizeFrames);
@@ -270,7 +272,7 @@ AudioSubSystem::AudioFeeder::AudioFeeder() : audioSink(true)
     format.bitsPerSample = 16;
     format.framesPerSecond = 48000;
     format.numChannels = 1;
-    
+
     this->audioSink.SetAudioOutput(new ThreadSafeAudioStream(format, mutex, true));
 }
 
