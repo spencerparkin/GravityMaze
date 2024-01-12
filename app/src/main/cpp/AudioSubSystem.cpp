@@ -1,6 +1,7 @@
 #include "AudioSubSystem.h"
 #include "AndroidOut.h"
 #include "Math/Utilities/Random.h"
+#include "Error.h"
 
 using namespace AudioDataLib;
 
@@ -233,10 +234,15 @@ bool AudioSubSystem::AudioClip::Load(const char* audioFilePath, AAssetManager* a
             break;
 
         const unsigned char* audioAssetBuf = static_cast<const unsigned char*>(AAsset_getBuffer(audioAsset));
-        BufferStream inputStream(audioAssetBuf, audioAssetSize);
+        ReadOnlyBufferStream inputStream(audioAssetBuf, audioAssetSize);
 
-        std::string error;
-        if(!waveFileFormat.ReadFromStream(inputStream, this->audioData, error))
+        Error error;
+        FileData* fileData = nullptr;
+        if(!waveFileFormat.ReadFromStream(inputStream, fileData, error))
+            break;
+
+        this->audioData = dynamic_cast<AudioData*>(fileData);
+        if(!this->audioData)
             break;
 
         // Make sure the format is what we expect to process on the stream.
