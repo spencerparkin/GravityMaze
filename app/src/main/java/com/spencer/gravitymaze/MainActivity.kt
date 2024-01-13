@@ -7,7 +7,16 @@ import android.os.Looper
 import android.media.midi.MidiDeviceInfo;
 import android.media.midi.MidiDevice;
 import android.media.midi.MidiManager;
+import android.os.Bundle
+import android.os.PersistableBundle
 import com.google.androidgamesdk.GameActivity
+
+class Listener : MidiManager.OnDeviceOpenedListener {
+    var openedDevice: MidiDevice? = null
+    override fun onDeviceOpened(device: MidiDevice?) {
+        this.openedDevice = device
+    }
+}
 
 class MainActivity : GameActivity() {
     companion object {
@@ -16,26 +25,23 @@ class MainActivity : GameActivity() {
         }
     }
 
-    fun openMidiDevice(): MidiDevice? {
+    var listener = Listener()
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+
         val midiManager = this.getSystemService(Context.MIDI_SERVICE) as MidiManager
-        //val deviceInfoArray = midiManager.getDevicesForTransport(MidiManager.TRANSPORT_MIDI_BYTE_STREAM)
-        val deviceInfoArray = midiManager.devices
-        var openedDevice: MidiDevice? = null
+        val deviceInfoArray = midiManager.getDevices()
         for(deviceInfo in deviceInfoArray) {
             if(deviceInfo.getOutputPortCount() > 0) {
-                midiManager.openDevice(deviceInfo, { device ->
-                    openedDevice = device
-                }, Handler(Looper.getMainLooper()))
+                midiManager.openDevice(deviceInfo, this.listener, Handler(Looper.getMainLooper()))
                 break
             }
         }
-
-        return openedDevice
     }
 
-    fun closeMidiDevice(openedDevice: MidiDevice) {
-        //val midiManager = this.getSystemService(Context.MIDI_SERVICE) as MidiManager
-        openedDevice.close();
+    fun getOpenedMidiDevice():MidiDevice? {
+        return this.listener.openedDevice
     }
 
     fun gameActivityFinished() {
