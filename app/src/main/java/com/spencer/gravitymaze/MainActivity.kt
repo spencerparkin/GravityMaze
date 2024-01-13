@@ -32,7 +32,16 @@ class MainActivity : GameActivity() {
 
         val midiManager = this.getSystemService(Context.MIDI_SERVICE) as MidiManager
         val deviceInfoArray = midiManager.getDevices()
+        //val deviceInfoArray: Array<MidiDeviceInfo> = midiManager.getDevicesForType(MidiDeviceInfo.TYPE_SYNTHESIZER)
+        //var deviceInfoArray = midiManager.getDevicesForTransport(MidiManager.TRANSPORT_MIDI_BYTE_STREAM)
         for(deviceInfo in deviceInfoArray) {
+            val portInfos = deviceInfo.ports
+            for (portInfo in portInfos) {
+                if (portInfo.type == MidiDeviceInfo.PortInfo.TYPE_INPUT) {
+                    Log.d("MIDI", "Input port found: " + portInfo.name)
+                }
+            }
+
             // TODO: This won't work.  We need an input port.
             if(deviceInfo.getOutputPortCount() > 0) {
                 midiManager.openDevice(deviceInfo, this.listener, Handler(Looper.getMainLooper()))
