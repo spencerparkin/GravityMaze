@@ -15,6 +15,7 @@ public:
     virtual ~MidiManager();
 
     void Manage();
+    void Abort();
 
     virtual bool SendMessage(const uint8_t* message, uint64_t messageSize, AudioDataLib::Error& error) override;
 

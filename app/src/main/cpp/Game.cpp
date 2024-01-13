@@ -194,6 +194,8 @@ bool Game::Shutdown()
 {
     this->SetState(nullptr);
 
+    this->midiManager.Abort();
+
     this->ShutdownWindow();
 
     this->maze.Clear();

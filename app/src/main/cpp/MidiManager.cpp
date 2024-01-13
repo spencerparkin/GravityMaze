@@ -43,6 +43,13 @@ void MidiManager::Manage()
         this->state = (this->*method)();
 }
 
+void MidiManager::Abort()
+{
+    this->state = State::SHUTDOWN;
+    while(this->state != State::DO_NOTHING)
+        this->Manage();
+}
+
 MidiManager::State MidiManager::InitialStateHandler()
 {
     // This is how we get at the JNIEnv object, but we never want to detach it.
