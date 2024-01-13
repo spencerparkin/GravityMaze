@@ -38,7 +38,7 @@ class MainActivity : GameActivity() {
             val portInfos = deviceInfo.ports
             for (portInfo in portInfos) {
                 if (portInfo.type == MidiDeviceInfo.PortInfo.TYPE_INPUT) {
-                    Log.d("MIDI", "Input port found: " + portInfo.name)
+                    //Log.d("MIDI", "Input port found: " + portInfo.name)
                 }
             }
 

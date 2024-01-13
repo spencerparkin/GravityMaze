@@ -210,9 +210,9 @@ bool AudioSubSystem::ManageMidi(android_app* app)
         if(!this->midiDevice)
             return false;
 
-        int numInputPorts = AMidiDevice_getNumInputPorts(this->midiDevice);
-        if(numInputPorts == 0)
-            return false;
+        //int numInputPorts = AMidiDevice_getNumInputPorts(this->midiDevice);
+        //if(numInputPorts == 0)
+        //    return false;
 
         if(AMEDIA_OK != AMidiInputPort_open(this->midiDevice, 0, &this->midiInputPort))
             return false;
