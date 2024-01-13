@@ -21,7 +21,7 @@ using namespace PlanarPhysics;
 
 //------------------------------ Game ------------------------------
 
-Game::Game(android_app* app)
+Game::Game(android_app* app) : midiManager(app)
 {
     app->onAppCmd = &Game::HandleAndroidCommand;
 
@@ -410,7 +410,7 @@ bool Game::Tick()
     this->HandleTapEvents();
 
     this->audioSubSystem.PumpAudio();
-    this->audioSubSystem.ManageMidi(this->app);
+    this->midiManager.Manage();
 
     void* data = nullptr;
     int events = 0;

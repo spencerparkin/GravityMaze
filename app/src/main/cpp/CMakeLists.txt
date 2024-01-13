@@ -25,6 +25,7 @@ add_library(gravitymaze SHARED
         Main.cpp
         AndroidOut.cpp
         AudioSubSystem.cpp
+        MidiManager.cpp
         Game.cpp
         Options.cpp
         Progress.cpp

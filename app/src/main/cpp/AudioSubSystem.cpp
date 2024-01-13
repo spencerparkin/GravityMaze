@@ -12,8 +12,6 @@ AudioSubSystem::AudioSubSystem()
     this->systemSetup = false;
     this->audioStream = nullptr;
     this->audioFeeder = nullptr;
-    this->midiDevice = nullptr;
-    this->midiInputPort = nullptr;
 }
 
 /*virtual*/ AudioSubSystem::~AudioSubSystem()
@@ -173,56 +171,6 @@ void AudioSubSystem::PlayFX(SoundFXType soundFXType)
 bool AudioSubSystem::PumpAudio()
 {
     this->audioFeeder->audioSink.GenerateAudio(0.05, 0.05);
-    return true;
-}
-
-bool AudioSubSystem::ManageMidi(android_app* app)
-{
-    if(this->midiDevice)
-    {
-        if(this->midiInputPort)
-        {
-            //...
-        }
-    }
-    else
-    {
-        JNIEnv* env = nullptr;
-        app->activity->vm->AttachCurrentThread(&env, nullptr);
-        if(!env)
-            return false;
-
-        jclass clazz = env->GetObjectClass(app->activity->javaGameActivity);
-        if(!clazz)
-            return false;
-
-        jmethodID method = env->GetMethodID(clazz, "getOpenedMidiDevice","()Landroid/media/midi/MidiDevice;");
-        if(!method)
-            return false;
-
-        jobject object = env->CallObjectMethod(app->activity->javaGameActivity, method);
-        if(!object)
-            return false;
-
-        if(AMEDIA_OK != AMidiDevice_fromJava(env, object, &this->midiDevice))
-            return false;
-
-        if(!this->midiDevice)
-            return false;
-
-        //int numInputPorts = AMidiDevice_getNumInputPorts(this->midiDevice);
-        //if(numInputPorts == 0)
-        //    return false;
-
-        if(AMEDIA_OK != AMidiInputPort_open(this->midiDevice, 0, &this->midiInputPort))
-            return false;
-
-        if(!this->midiInputPort)
-            return false;
-
-        aout << "Opened MIDI input port 0 successfully!" << std::endl;
-    }
-
     return true;
 }
 

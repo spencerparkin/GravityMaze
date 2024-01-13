@@ -5,6 +5,7 @@
 #include <memory>
 #include <android/sensor.h>
 #include "AudioSubSystem.h"
+#include "MidiManager.h"
 #include "Engine.h"
 #include "Maze.h"
 #include "DrawHelper.h"
@@ -159,6 +160,7 @@ private:
     Progress progress;
     TextRenderer textRenderer;
     AudioSubSystem audioSubSystem;
+    MidiManager midiManager;
     clock_t lastTime;
     bool debugWinEntireGame;    // This variable is only meant to be changed by an attached debugger.
 };
