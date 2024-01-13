@@ -1,12 +1,23 @@
 #include "MidiManager.h"
 #include "AndroidOut.h"
+#include "MidiFileFormat.h"
+#include "MidiData.h"
+#include "Error.h"
+#include "Math/Utilities/Random.h"
+#include <android/asset_manager.h>
 #include <jni.h>
 
-MidiManager::MidiManager(android_app* app)
+using namespace AudioDataLib;
+
+MidiManager::MidiManager(android_app* app) : AudioDataLib::MidiPlayer(nullptr)
 {
     this->app = app;
     this->midiDevice = nullptr;
     this->midiInputPort = nullptr;
+    this->nextSongOffset = 0;
+    this->currentMidiData = nullptr;
+    this->waitTimeBetweenSongsSeconds = 0.0;
+    this->waitTimeBegin = 0;
     this->state = State::INITIAL;
     this->stateMethodMap.insert(std::pair<State, StateMethod>(State::INITIAL, &MidiManager::InitialStateHandler));
     this->stateMethodMap.insert(std::pair<State, StateMethod>(State::SHUTDOWN, &MidiManager::ShutdownStateHandler));
@@ -63,6 +74,15 @@ MidiManager::State MidiManager::InitialStateHandler()
 MidiManager::State MidiManager::ShutdownStateHandler()
 {
     aout << "Shutdown down MIDI stuff..." << std::endl;
+
+    Error error;
+    this->EndPlayback(error);
+
+    if(this->currentMidiData)
+    {
+        MidiData::Destroy(this->currentMidiData);
+        this->currentMidiData = nullptr;
+    }
 
     if(this->midiInputPort)
     {
@@ -131,21 +151,131 @@ MidiManager::State MidiManager::WaitForMidiDeviceOpenStateHandler()
 
 MidiManager::State MidiManager::PickNewSongStateHandler()
 {
-    // TODO: Write this.
-    return State::PICK_NEW_SONG;
+    AAssetManager* assetManager = this->app->activity->assetManager;
+
+    if(this->shuffledSongArray.size() == 0 || this->nextSongOffset >= this->shuffledSongArray.size())
+    {
+        this->shuffledSongArray.clear();
+
+        AAssetDir* songDir = AAssetManager_openDir(assetManager, "midi_songs");
+        if(!songDir)
+            return State::SHUTDOWN;
+
+        while(true)
+        {
+            const char* songFile = AAssetDir_getNextFileName(songDir);
+            if(!songDir)
+                break;
+
+            this->shuffledSongArray.push_back(songFile);
+        }
+
+        AAssetDir_close(songDir);
+
+        if(this->shuffledSongArray.size() == 0)
+            return State::SHUTDOWN;
+
+        PlanarPhysics::Random::ShuffleArray<std::string>(this->shuffledSongArray);
+        this->nextSongOffset = 0;
+    }
+
+    std::string songFile = this->shuffledSongArray[this->nextSongOffset++];
+    AAsset* songAsset = AAssetManager_open(assetManager, songFile.c_str(), AASSET_MODE_BUFFER);
+    if(!songAsset)
+        return State::SHUTDOWN;
+
+    int songAssetSize = AAsset_getLength(songAsset);
+    const unsigned char* songAssetBuf = static_cast<const unsigned char*>(AAsset_getBuffer(songAsset));
+    Error error;
+    FileData* fileData = nullptr;
+    ReadOnlyBufferStream bufferStream(songAssetBuf, songAssetSize);
+    MidiFileFormat fileFormat;
+    bool success = fileFormat.ReadFromStream(bufferStream, fileData, error);
+    AAsset_close(songAsset);
+
+    if(!success)
+    {
+        delete fileData;
+        aout << "Failed to read MIDI file: " + songFile << std::endl;
+        aout << "Reason: " + error.GetMessage() << std::endl;
+        return State::SHUTDOWN;
+    }
+
+    this->currentMidiData = dynamic_cast<MidiData*>(fileData);
+    if(!this->currentMidiData)
+    {
+        delete fileData;
+        return State::SHUTDOWN;
+    }
+
+    this->SetMidiData(this->currentMidiData);
+
+    std::set<uint32_t> tracksToPlaySet;
+    this->GetSimultaneouslyPlayableTracks(tracksToPlaySet);
+    if(!this->BeginPlayback(tracksToPlaySet, error))
+        return State::SHUTDOWN;
+
+    return State::PLAY_SONG;
 }
 
 MidiManager::State MidiManager::PlaySongStateHandler()
 {
-    return this->state;
+    Error error;
+
+    if(this->NoMoreToPlay())
+    {
+        this->EndPlayback(error);
+        this->SetMidiData(nullptr);
+        delete this->currentMidiData;
+        this->currentMidiData = nullptr;
+        return State::PICK_WAIT_TIME_BETWEEN_SONGS;
+    }
+
+    if(!this->ManagePlayback(error))
+    {
+        aout << "Error occurred during playback management!" << std::endl;
+        aout << "Error: " + error.GetMessage() << std::endl;
+        return State::SHUTDOWN;
+    }
+
+    return State::PLAY_SONG;
 }
 
 MidiManager::State MidiManager::PickWaitTimeBetweenSongsStateHandler()
 {
-    return this->state;
+    this->waitTimeBetweenSongsSeconds = PlanarPhysics::Random::Number(10.0, 20.0);
+    this->waitTimeBegin = ::clock();
+    return State::WAIT_BETWEEN_SONGS;
 }
 
 MidiManager::State MidiManager::WaitBetweenSongsStateHandler()
 {
-    return this->state;
+    clock_t waitTimeNow = ::clock();
+    clock_t waitTimeElapsed = waitTimeNow - this->waitTimeBegin;
+    double waitTimeElapsedSeconds = double(waitTimeElapsed) / double(CLOCKS_PER_SEC);
+    if(waitTimeElapsedSeconds >= this->waitTimeBetweenSongsSeconds)
+        return State::PICK_NEW_SONG;
+
+    return State::WAIT_BETWEEN_SONGS;
+}
+
+/*virtual*/ bool MidiManager::SendMessage(const uint8_t* message, uint64_t messageSize, AudioDataLib::Error& error)
+{
+    if(!this->midiInputPort)
+    {
+        error.Add("No MIDI input port to which we can send the message!");
+        return false;
+    }
+
+    // Hmmm...not so sure this loop is such a good idea.
+    ssize_t bytesRemaining = messageSize;
+    ssize_t totalBytesSent = 0;
+    while(bytesRemaining > 0)
+    {
+        ssize_t numBytesSent = AMidiInputPort_send(this->midiInputPort, &message[totalBytesSent], bytesRemaining);
+        totalBytesSent += numBytesSent;
+        bytesRemaining -= numBytesSent;
+    }
+
+    return true;
 }

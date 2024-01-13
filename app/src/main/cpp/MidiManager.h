@@ -3,14 +3,20 @@
 #include <game-activity/native_app_glue/android_native_app_glue.h>
 #include <AMidi/AMidi.h>
 #include <map>
+#include <string>
+#include <vector>
+#include "MidiPlayer.h"
+#include "MidiData.h"
 
-class MidiManager
+class MidiManager : public AudioDataLib::MidiPlayer
 {
 public:
     MidiManager(android_app* app);
     virtual ~MidiManager();
 
     void Manage();
+
+    virtual bool SendMessage(const uint8_t* message, uint64_t messageSize, AudioDataLib::Error& error) override;
 
 private:
 
@@ -43,4 +49,9 @@ private:
     StateMethodMap stateMethodMap;
     AMidiDevice* midiDevice;
     AMidiInputPort* midiInputPort;
+    std::vector<std::string> shuffledSongArray;
+    int nextSongOffset;
+    AudioDataLib::MidiData* currentMidiData;
+    double waitTimeBetweenSongsSeconds;
+    clock_t waitTimeBegin;
 };

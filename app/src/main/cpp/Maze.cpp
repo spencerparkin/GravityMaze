@@ -207,7 +207,7 @@ void Maze::PopulatePhysicsWorld(PlanarPhysics::Engine* engine, int touches, bool
     for(int i = 1; i < this->nodeArray.size(); i++)
         availableSlots.push_back(i);
 
-    Random::ShuffleArray(availableSlots);
+    Random::ShuffleArray<int>(availableSlots);
     int* slot = availableSlots.data();
 
     int numGoodMazeBlocks = this->cols - 1;
