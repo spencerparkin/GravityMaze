@@ -171,7 +171,7 @@ MidiManager::State MidiManager::PickNewSongStateHandler()
         while(true)
         {
             const char* songFile = AAssetDir_getNextFileName(songDir);
-            if(!songDir)
+            if(!songFile)
                 break;
 
             this->shuffledSongArray.push_back(songFile);
