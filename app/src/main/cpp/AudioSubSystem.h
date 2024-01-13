@@ -1,5 +1,6 @@
 #pragma once
 
+#include <game-activity/native_app_glue/android_native_app_glue.h>
 #include <oboe/Oboe.h>
 #include <ByteStream.h>
 #include <AudioData.h>
@@ -9,6 +10,7 @@
 #include <android/asset_manager.h>
 #include <vector>
 #include <oboe/AudioStreamCallback.h>
+#include <AMidi/AMidi.h>
 
 // This is the abstraction layer between our game software and the underlying audio library.
 class AudioSubSystem
@@ -20,6 +22,7 @@ public:
     bool Setup(AAssetManager* assetManager);
     bool Shutdown();
     bool PumpAudio();
+    bool ManageMidi(android_app* app);
 
     enum class SoundFXType
     {
@@ -85,4 +88,6 @@ private:
     AudioFeeder* audioFeeder;
     std::vector<AudioClip*> audioClipArray;
     ErrorCallback errorCallback;
+    AMidiDevice* midiDevice;
+    AMidiInputPort* midiInputPort;
 };

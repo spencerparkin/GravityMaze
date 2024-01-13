@@ -410,6 +410,7 @@ bool Game::Tick()
     this->HandleTapEvents();
 
     this->audioSubSystem.PumpAudio();
+    this->audioSubSystem.ManageMidi(this->app);
 
     void* data = nullptr;
     int events = 0;
@@ -460,7 +461,7 @@ bool Game::Tick()
                     jmethodID method = env->GetMethodID(clazz, "gameActivityFinished", "()V");
                     env->CallVoidMethod(this->app->activity->javaGameActivity, method);
                     env->DeleteLocalRef(clazz);
-                    this->app->activity->vm->DetachCurrentThread();
+                    //this->app->activity->vm->DetachCurrentThread();   Note: I don't think I'm ever supposed to call this.
                 }
             }
         }

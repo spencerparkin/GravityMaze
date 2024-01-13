@@ -64,5 +64,6 @@ target_link_libraries(gravitymaze
         GLESv3
         jnigraphics
         android
+        amidi
         oboe
         log)
