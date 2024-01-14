@@ -297,6 +297,7 @@ MidiManager::State MidiManager::PickWaitTimeBetweenSongsStateHandler()
 {
     this->waitTimeBetweenSongsSeconds = PlanarPhysics::Random::Number(10.0, 20.0);
     this->waitTimeBegin = ::clock();
+    aout << "Waiting " << this->waitTimeBetweenSongsSeconds << " seconds before playing another song." << std::endl;
     return State::WAIT_BETWEEN_SONGS;
 }
 

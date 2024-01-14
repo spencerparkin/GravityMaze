@@ -82,7 +82,13 @@ class MainActivity : GameActivity() {
         var foundDeviceInfo: MidiDeviceInfo? = null
         for(deviceInfo in deviceInfoArray) {
             if(deviceInfo.getInputPortCount() > 0) {
-                foundDeviceInfo = deviceInfo
+                // This doesn't seem like a good stratagy.
+                // What I really need to know is if the device can synthasize.
+                val bundle: Bundle = deviceInfo.getProperties()
+                val name: String? = bundle.getString(MidiDeviceInfo.PROPERTY_NAME)
+                if(name != null && name.contains("Player")) {
+                    foundDeviceInfo = deviceInfo
+                }
                 break
             }
         }
