@@ -152,7 +152,7 @@ MidiManager::State MidiManager::WaitForMidiDeviceOpenStateHandler()
     int32_t deviceType = AMidiDevice_getType(this->midiDevice);
     switch(deviceType)
     {
-        case AMIDI_DEVICE_TYPE_SUB:
+        case AMIDI_DEVICE_TYPE_USB:
         {
             aout << "Device type is USB" << std::endl;
             break;
