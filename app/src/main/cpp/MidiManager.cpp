@@ -131,13 +131,15 @@ MidiManager::State MidiManager::WaitForMidiDeviceOpenStateHandler()
 
     jobject object = env->CallObjectMethod(app->activity->javaGameActivity, method);
     if(!object)
-    {
-        aout << "MIDI device open succeeded!" << std::endl;
-        return State::PICK_NEW_SONG;
-    }
+        return State::WAIT_FOR_MIDI_DEVICE_OPEN;
+
+    aout << "MIDI device open succeeded!" << std::endl;
 
     if(AMEDIA_OK != AMidiDevice_fromJava(env, object, &this->midiDevice))
+    {
+        aout << "Failed to get MIDI device from Java!" << std::endl;
         return State::SHUTDOWN;
+    }
 
     if(!this->midiDevice)
         return State::SHUTDOWN;
@@ -148,7 +150,10 @@ MidiManager::State MidiManager::WaitForMidiDeviceOpenStateHandler()
     //    return State::SHUTDOWN;
 
     if(AMEDIA_OK != AMidiInputPort_open(this->midiDevice, 0, &this->midiInputPort))
+    {
+        aout << "Failed to open input port on MIDI device!" << std::endl;
         return State::SHUTDOWN;
+    }
 
     if(!this->midiInputPort)
         return State::SHUTDOWN;
