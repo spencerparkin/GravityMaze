@@ -275,7 +275,6 @@ MidiManager::State MidiManager::PlaySongStateHandler()
         return State::PICK_WAIT_TIME_BETWEEN_SONGS;
     }
 
-    // TODO: Pause playback if our window is destroyed.
     if(!this->ManagePlayback(error))
     {
         aout << "Error occurred during playback management!" << std::endl;

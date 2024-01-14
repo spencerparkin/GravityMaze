@@ -40,6 +40,7 @@ class MainActivity : GameActivity() {
         val product: String? = bundle.getString(MidiDeviceInfo.PROPERTY_SERIAL_NUMBER)
         val serial: String? = bundle.getString(MidiDeviceInfo.PROPERTY_SERIAL_NUMBER)
         val version: String? = bundle.getString(MidiDeviceInfo.PROPERTY_VERSION)
+        //val protocol: Int = deviceInfo.getDefaultProtocol()
         Log.d("logMidiDevice", "=============================================")
         Log.d("logMidiDevice", "Manufacturer: " + manufacturer)
         Log.d("logMidiDevice", "Name:         " + name)
@@ -58,10 +59,16 @@ class MainActivity : GameActivity() {
             Log.d("logMidiDevice", "Name  : " + portName)
             Log.d("logMidiDevice", "Type  : " + portType)
         }
+
+        Log.d("logMidiDevice", "!!!!!!!!!!!!!!!!!!!!!!!!!!")
+        Log.d("logMidiDevice", deviceInfo.toString())
     }
 
     fun kickOffMidiDeviceOpen(): Boolean {
         val midiManager = this.getSystemService(Context.MIDI_SERVICE) as MidiManager
+
+        // TODO: We shouldn't decide on a device here.  We should let the user pick what
+        //       MIDI device they want to use in a UI activity page or something like that.
 
         // Can't use this, because my phone is too old.
         //val deviceInfoArray: Array<MidiDeviceInfo> = midiManager.getDevicesForType(MidiDeviceInfo.TYPE_SYNTHESIZER)
@@ -81,28 +88,9 @@ class MainActivity : GameActivity() {
         // receives input through the port from us.)
         var foundDeviceInfo: MidiDeviceInfo? = null
         for(deviceInfo in deviceInfoArray) {
-            if(deviceInfo.getInputPortCount() > 0) {
-                // This doesn't seem like a good stratagy.
-                // What I really need to know is if the device can synthasize.
-                val bundle: Bundle = deviceInfo.getProperties()
-                val name: String? = bundle.getString(MidiDeviceInfo.PROPERTY_NAME)
-                if(name != null && name.contains("Player")) {
-                    foundDeviceInfo = deviceInfo
-                }
+            if(deviceInfo.getInputPortCount() > 0 && deviceInfo.getOutputPortCount() > 0) {
+                foundDeviceInfo = deviceInfo
                 break
-            }
-        }
-
-        // If we didn't find it, then look for a device with an output port.
-        // Sometimes the Android SDK misreports the capabilities of a device.
-        // That is, even if a device only has an output port, we can still open
-        // an input port on the device.  Thanks, Google.
-        if(foundDeviceInfo == null) {
-            for (deviceInfo in deviceInfoArray) {
-                if (deviceInfo.getOutputPortCount() > 0) {
-                    foundDeviceInfo = deviceInfo
-                    break
-                }
             }
         }
 
