@@ -149,6 +149,26 @@ MidiManager::State MidiManager::WaitForMidiDeviceOpenStateHandler()
     //if(numInputPorts == 0)
     //    return State::SHUTDOWN;
 
+    int32_t deviceType = AMidiDevice_getType(this->midiDevice);
+    switch(deviceType)
+    {
+        case AMIDI_DEVICE_TYPE_SUB:
+        {
+            aout << "Device type is USB" << std::endl;
+            break;
+        }
+        case AMIDI_DEVICE_TYPE_BLUETOOTH:
+        {
+            aout << "Device Type is BLUETOOTH" << std::endl;
+            break;
+        }
+        case AMIDI_DEVICE_TYPE_VIRTUAL:
+        {
+            aout << "Device type is VIRTUAL" << std::endl;
+            break;
+        }
+    }
+
     if(AMEDIA_OK != AMidiInputPort_open(this->midiDevice, 0, &this->midiInputPort))
     {
         aout << "Failed to open input port on MIDI device!" << std::endl;
@@ -191,7 +211,8 @@ MidiManager::State MidiManager::PickNewSongStateHandler()
         this->nextSongOffset = 0;
     }
 
-    std::string songFile = this->shuffledSongArray[this->nextSongOffset++];
+    std::string songFile = "midi_songs/" + this->shuffledSongArray[this->nextSongOffset++];
+    aout << "Loading song: " + songFile << std::endl;
     AAsset* songAsset = AAssetManager_open(assetManager, songFile.c_str(), AASSET_MODE_BUFFER);
     if(!songAsset)
         return State::SHUTDOWN;
@@ -227,6 +248,7 @@ MidiManager::State MidiManager::PickNewSongStateHandler()
     if(!this->BeginPlayback(tracksToPlaySet, error))
         return State::SHUTDOWN;
 
+    aout << "Song should now play!!!" << std::endl;
     return State::PLAY_SONG;
 }
 
@@ -236,6 +258,7 @@ MidiManager::State MidiManager::PlaySongStateHandler()
 
     if(this->NoMoreToPlay())
     {
+        aout << "Hit end of song!" << std::endl;
         this->EndPlayback(error);
         this->SetMidiData(nullptr);
         delete this->currentMidiData;
