@@ -245,6 +245,14 @@ MidiManager::State MidiManager::PickNewSongStateHandler()
 
     std::set<uint32_t> tracksToPlaySet;
     this->GetSimultaneouslyPlayableTracks(tracksToPlaySet);
+
+    for(uint32_t i : tracksToPlaySet)
+    {
+        double trackTimeSeconds = 0.0;
+        this->currentMidiData->CalculateTrackLengthInSeconds(i, trackTimeSeconds, error);
+        aout << "Track " << i << " is " << trackTimeSeconds << " seconds." << std::endl;
+    }
+
     this->SetTimeSeconds(0.0);
     if(!this->BeginPlayback(tracksToPlaySet, error))
         return State::SHUTDOWN;
