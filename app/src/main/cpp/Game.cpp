@@ -408,7 +408,8 @@ void Game::HandleTapEvents()
 //       killing the performance.  But then why does our FPS seem
 //       high most of the time?  It's confusing, but all I know is
 //       that maybe it would be worth looking into a dedicated
-//       render thread.
+//       render thread.  Note that you could double-buffer the
+//       dynamic vertex buffer.
 bool Game::Tick()
 {
     clock_t currentTime = ::clock();
