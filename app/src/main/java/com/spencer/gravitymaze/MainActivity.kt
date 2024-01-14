@@ -8,7 +8,7 @@ import android.media.midi.MidiDeviceInfo;
 import android.media.midi.MidiDevice;
 import android.media.midi.MidiManager;
 import android.os.Bundle
-import android.os.PersistableBundle
+import android.util.Log
 import com.google.androidgamesdk.GameActivity
 
 class MidiDeviceOpenListener : MidiManager.OnDeviceOpenedListener {
@@ -33,6 +33,33 @@ class MainActivity : GameActivity() {
         //...
     }
 
+    fun logMidiDevice(deviceInfo: MidiDeviceInfo) {
+        val bundle: Bundle = deviceInfo.getProperties()
+        val manufacturer: String? = bundle.getString(MidiDeviceInfo.PROPERTY_MANUFACTURER)
+        val name: String? = bundle.getString(MidiDeviceInfo.PROPERTY_NAME)
+        val product: String? = bundle.getString(MidiDeviceInfo.PROPERTY_SERIAL_NUMBER)
+        val serial: String? = bundle.getString(MidiDeviceInfo.PROPERTY_SERIAL_NUMBER)
+        val version: String? = bundle.getString(MidiDeviceInfo.PROPERTY_VERSION)
+        Log.d("logMidiDevice", "=============================================")
+        Log.d("logMidiDevice", "Manufacturer: " + manufacturer)
+        Log.d("logMidiDevice", "Name:         " + name)
+        Log.d("logMidiDevice", "Product:      " + product)
+        Log.d("logMidiDevice", "Serial:       " + serial)
+        Log.d("logMidiDevice", "Version:      " + version)
+
+        val portInfoArray: Array<MidiDeviceInfo.PortInfo> = deviceInfo.getPorts()
+        Log.d("logMidiDevice", "Num ports:    " + portInfoArray.size)
+        for(portInfo in portInfoArray) {
+            Log.d("logMidiDevice", "------------------------------")
+            val portType = portInfo.getType()
+            val portName = portInfo.getName()
+            val portNumber = portInfo.getPortNumber()
+            Log.d("logMidiDevice", "Port #: " + portNumber)
+            Log.d("logMidiDevice", "Name  : " + portName)
+            Log.d("logMidiDevice", "Type  : " + portType)
+        }
+    }
+
     fun kickOffMidiDeviceOpen(): Boolean {
         val midiManager = this.getSystemService(Context.MIDI_SERVICE) as MidiManager
 
@@ -45,7 +72,13 @@ class MainActivity : GameActivity() {
         // Fortunately, this still seems to work.
         val deviceInfoArray = midiManager.getDevices()
 
-        // First, look for a device with an input port.  (We "input" into the port.)
+        // Log everything we find for starters.
+        for(deviceInfo in deviceInfoArray) {
+            this.logMidiDevice(deviceInfo)
+        }
+
+        // First, look for a device with an input port.  (The device
+        // receives input through the port from us.)
         var foundDeviceInfo: MidiDeviceInfo? = null
         for(deviceInfo in deviceInfoArray) {
             if(deviceInfo.getInputPortCount() > 0) {
@@ -72,6 +105,8 @@ class MainActivity : GameActivity() {
         // Rather, the calling code will check back with us periodically to
         // see if the open actually succeeded.
         if(foundDeviceInfo != null) {
+            Log.d("kickOffMidiDeviceOpen", "CHOSEN DEVICE FOLLOWS...")
+            this.logMidiDevice(foundDeviceInfo)
             midiManager.openDevice(foundDeviceInfo, this.midiDeviceOpenListener, Handler(Looper.getMainLooper()))
             return true
         }
