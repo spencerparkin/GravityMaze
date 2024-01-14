@@ -397,6 +397,18 @@ void Game::HandleTapEvents()
     android_app_clear_motion_events(inputBuffer);
 }
 
+// TODO: Can we off-load the rendering to its own thread?
+//       That's what's slowing MIDI and physics/animation down.
+//       Play with this.  If we comment out rendering, does
+//       the music play fine while in app?  Okay, I played with
+//       this and it is clear to me that it is the render that
+//       is slowing everything down.  The the physics, or music
+//       or preparing what we want to render or even creating
+//       the vertex buffers.  It's the GL-swap buffer call that's
+//       killing the performance.  But then why does our FPS seem
+//       high most of the time?  It's confusing, but all I know is
+//       that maybe it would be worth looking into a dedicated
+//       render thread.
 bool Game::Tick()
 {
     clock_t currentTime = ::clock();

@@ -275,9 +275,9 @@ MidiManager::State MidiManager::PlaySongStateHandler()
         return State::PICK_WAIT_TIME_BETWEEN_SONGS;
     }
 
-    // TODO: We actually need to call this on a dedicated thread.  That means that this
-    //       whole state handler should do nothing more than monitor a thread.
-    //       Of course, we need a way to signal it to exit if necessary in our ::Abort() function.
+    // TODO: If the app window is destroyed or something like that, we need
+    //       to send a NOTE-OFF event for all channels.  We should probably
+    //       do this after the window is recreated too.
     if(!this->ManagePlayback(error))
     {
         aout << "Error occurred during playback management!" << std::endl;
