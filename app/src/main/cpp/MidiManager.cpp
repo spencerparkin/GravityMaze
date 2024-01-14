@@ -275,6 +275,9 @@ MidiManager::State MidiManager::PlaySongStateHandler()
         return State::PICK_WAIT_TIME_BETWEEN_SONGS;
     }
 
+    // TODO: We actually need to call this on a dedicated thread.  That means that this
+    //       whole state handler should do nothing more than monitor a thread.
+    //       Of course, we need a way to signal it to exit if necessary in our ::Abort() function.
     if(!this->ManagePlayback(error))
     {
         aout << "Error occurred during playback management!" << std::endl;

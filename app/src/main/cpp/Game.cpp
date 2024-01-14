@@ -412,8 +412,6 @@ bool Game::Tick()
     this->HandleTapEvents();
 
     this->audioSubSystem.PumpAudio();
-
-    // TODO: This needs to happen on its own thread.  I wonder if physics/animation needs to happen on its own thread too?
     this->midiManager.Manage();
 
     void* data = nullptr;
