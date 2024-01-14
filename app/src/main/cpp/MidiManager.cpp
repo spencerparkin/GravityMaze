@@ -281,12 +281,12 @@ MidiManager::State MidiManager::PlaySongStateHandler()
         aout << "Error: " + error.GetMessage() << std::endl;
         return State::SHUTDOWN;
     }
-    
+
     int32_t timeSeconds = ::round(this->GetTimeSeconds());
     static int32_t lastTimeSeconds = 0;
     if(timeSeconds != lastTimeSeconds)
     {
-        aout << "Playback at %d seconds." << timeSeconds << std::endl;
+        aout << "Playback at " << timeSeconds << " seconds." << std::endl;
         lastTimeSeconds = timeSeconds;
     }
 
