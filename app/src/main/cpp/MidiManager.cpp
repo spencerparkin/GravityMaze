@@ -144,10 +144,9 @@ MidiManager::State MidiManager::WaitForMidiDeviceOpenStateHandler()
     if(!this->midiDevice)
         return State::SHUTDOWN;
 
-    // We don't check this, because Android SDK will sometimes mis-report the capabilities of a device.
-    //int numInputPorts = AMidiDevice_getNumInputPorts(this->midiDevice);
-    //if(numInputPorts == 0)
-    //    return State::SHUTDOWN;
+    int numInputPorts = AMidiDevice_getNumInputPorts(this->midiDevice);
+    if(numInputPorts == 0)
+        return State::SHUTDOWN;
 
     int32_t deviceType = AMidiDevice_getType(this->midiDevice);
     switch(deviceType)
