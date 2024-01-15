@@ -242,7 +242,8 @@ bool Game::SetupWindow()
             EGL_BLUE_SIZE, 8,
             EGL_GREEN_SIZE, 8,
             EGL_RED_SIZE, 8,
-            EGL_DEPTH_SIZE, 24,
+            EGL_ALPHA_SIZE, 8,
+            EGL_DEPTH_SIZE, 0,
             EGL_NONE
     };
 
@@ -255,13 +256,14 @@ bool Game::SetupWindow()
     EGLConfig* foundConfig = std::find_if(supportedConfigs.get(), supportedConfigs.get() + numConfigs,
           [this](const EGLConfig& config)
           {
-              EGLint red = 0, green = 0, blue = 0, depth = 0;
+              EGLint red = 0, green = 0, blue = 0, alpha = 0, depth = 0;
               if (eglGetConfigAttrib(this->display, config, EGL_RED_SIZE, &red) &&
                   eglGetConfigAttrib(this->display, config, EGL_GREEN_SIZE, &green) &&
                   eglGetConfigAttrib(this->display, config, EGL_BLUE_SIZE, &blue) &&
+                  eglGetConfigAttrib(this->display, config, EGL_ALPHA_SIZE, &alpha) &&
                   eglGetConfigAttrib(this->display, config, EGL_DEPTH_SIZE, &depth))
               {
-                  return red == 8 && green == 8 && blue == 8 && depth == 24;
+                  return red == 8 && green == 8 && blue == 8 && alpha == 8 && depth == 0;
               }
               return false;
           });
