@@ -5,6 +5,7 @@
 #include <map>
 #include <string>
 #include <vector>
+#include <pthread.h>
 #include "MidiPlayer.h"
 #include "MidiData.h"
 
@@ -45,6 +46,10 @@ private:
     State PickWaitTimeBetweenSongsStateHandler();
     State WaitBetweenSongsStateHandler();
 
+    static void* PlaybackThreadEntryPoint(void* arg);
+
+    void PlaybackThread();
+
     android_app* app;
     State state;
     StateMethodMap stateMethodMap;
@@ -55,4 +60,6 @@ private:
     AudioDataLib::MidiData* currentMidiData;
     double waitTimeBetweenSongsSeconds;
     clock_t waitTimeBegin;
+    pthread_t playbackThread;
+    volatile bool playbackThreadRunning;
 };
