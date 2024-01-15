@@ -39,5 +39,8 @@
                 android:value="gravitymaze" />
         </activity>
     </application>
-
+    <uses-feature android:name="android.hardware.audio.midi" android:required="true" />
+    <uses-feature android:name="android.software.midi" android:required="true"/>
+    <uses-permission android:name="android.permission.MIDI_DEVICE" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
 </manifest>

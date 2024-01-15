@@ -21,7 +21,7 @@ using namespace PlanarPhysics;
 
 //------------------------------ Game ------------------------------
 
-Game::Game(android_app* app)
+Game::Game(android_app* app) : midiManager(app)
 {
     app->onAppCmd = &Game::HandleAndroidCommand;
 
@@ -193,6 +193,8 @@ bool Game::Setup()
 bool Game::Shutdown()
 {
     this->SetState(nullptr);
+
+    this->midiManager.Abort();
 
     this->ShutdownWindow();
 
@@ -395,6 +397,19 @@ void Game::HandleTapEvents()
     android_app_clear_motion_events(inputBuffer);
 }
 
+// TODO: Can we off-load the rendering to its own thread?
+//       That's what's slowing MIDI and physics/animation down.
+//       Play with this.  If we comment out rendering, does
+//       the music play fine while in app?  Okay, I played with
+//       this and it is clear to me that it is the render that
+//       is slowing everything down.  The the physics, or music
+//       or preparing what we want to render or even creating
+//       the vertex buffers.  It's the GL-swap buffer call that's
+//       killing the performance.  But then why does our FPS seem
+//       high most of the time?  It's confusing, but all I know is
+//       that maybe it would be worth looking into a dedicated
+//       render thread.  Note that you could double-buffer the
+//       dynamic vertex buffer.
 bool Game::Tick()
 {
     clock_t currentTime = ::clock();
@@ -410,6 +425,7 @@ bool Game::Tick()
     this->HandleTapEvents();
 
     this->audioSubSystem.PumpAudio();
+    this->midiManager.Manage();
 
     void* data = nullptr;
     int events = 0;
@@ -460,7 +476,7 @@ bool Game::Tick()
                     jmethodID method = env->GetMethodID(clazz, "gameActivityFinished", "()V");
                     env->CallVoidMethod(this->app->activity->javaGameActivity, method);
                     env->DeleteLocalRef(clazz);
-                    this->app->activity->vm->DetachCurrentThread();
+                    //this->app->activity->vm->DetachCurrentThread();   Note: I don't think I'm ever supposed to call this.
                 }
             }
         }

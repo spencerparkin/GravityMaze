@@ -69,6 +69,9 @@ void DrawHelper::EndRender()
 {
     if(this->lineVertexBuffer.size() > 0)
     {
+        // TODO: Can we get a speed-up here by using a dynamic VBO?
+        //       See: https://stackoverflow.com/questions/36000356/why-use-vertex-buffer-objects-for-dynamic-objects
+
         this->lineShader.Bind();
 
         GLint location = this->lineShader.GetUniformLocation("projectionMatrix");

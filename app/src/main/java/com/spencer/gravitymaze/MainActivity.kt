@@ -1,7 +1,22 @@
 package com.spencer.gravitymaze
 
 import android.view.View
+import android.content.Context;
+import android.os.Handler
+import android.os.Looper
+import android.media.midi.MidiDeviceInfo;
+import android.media.midi.MidiDevice;
+import android.media.midi.MidiManager;
+import android.os.Bundle
+import android.util.Log
 import com.google.androidgamesdk.GameActivity
+
+class MidiDeviceOpenListener : MidiManager.OnDeviceOpenedListener {
+    var openedDevice: MidiDevice? = null
+    override fun onDeviceOpened(device: MidiDevice?) {
+        this.openedDevice = device
+    }
+}
 
 class MainActivity : GameActivity() {
     companion object {
@@ -10,6 +25,98 @@ class MainActivity : GameActivity() {
         }
     }
 
+    var midiDeviceOpenListener = MidiDeviceOpenListener()
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+
+        //...
+    }
+
+    fun logMidiDevice(deviceInfo: MidiDeviceInfo) {
+        val bundle: Bundle = deviceInfo.getProperties()
+        val manufacturer: String? = bundle.getString(MidiDeviceInfo.PROPERTY_MANUFACTURER)
+        val name: String? = bundle.getString(MidiDeviceInfo.PROPERTY_NAME)
+        val product: String? = bundle.getString(MidiDeviceInfo.PROPERTY_SERIAL_NUMBER)
+        val serial: String? = bundle.getString(MidiDeviceInfo.PROPERTY_SERIAL_NUMBER)
+        val version: String? = bundle.getString(MidiDeviceInfo.PROPERTY_VERSION)
+        //val protocol: Int = deviceInfo.getDefaultProtocol()
+        Log.d("logMidiDevice", "=============================================")
+        Log.d("logMidiDevice", "Manufacturer: " + manufacturer)
+        Log.d("logMidiDevice", "Name:         " + name)
+        Log.d("logMidiDevice", "Product:      " + product)
+        Log.d("logMidiDevice", "Serial:       " + serial)
+        Log.d("logMidiDevice", "Version:      " + version)
+
+        val portInfoArray: Array<MidiDeviceInfo.PortInfo> = deviceInfo.getPorts()
+        Log.d("logMidiDevice", "Num ports:    " + portInfoArray.size)
+        for(portInfo in portInfoArray) {
+            Log.d("logMidiDevice", "------------------------------")
+            val portType = portInfo.getType()
+            val portName = portInfo.getName()
+            val portNumber = portInfo.getPortNumber()
+            Log.d("logMidiDevice", "Port #: " + portNumber)
+            Log.d("logMidiDevice", "Name  : " + portName)
+            Log.d("logMidiDevice", "Type  : " + portType)
+        }
+
+        Log.d("logMidiDevice", "!!!!!!!!!!!!!!!!!!!!!!!!!!")
+        Log.d("logMidiDevice", deviceInfo.toString())
+    }
+
+    fun kickOffMidiDeviceOpen(): Boolean {
+        val midiManager = this.getSystemService(Context.MIDI_SERVICE) as MidiManager
+
+        // TODO: We shouldn't decide on a device here.  We should let the user pick what
+        //       MIDI device they want to use in a UI activity page or something like that.
+
+        // Can't use this, because my phone is too old.
+        //val deviceInfoArray: Array<MidiDeviceInfo> = midiManager.getDevicesForType(MidiDeviceInfo.TYPE_SYNTHESIZER)
+
+        // Can't use this, because it's deprecated, I think.
+        //var deviceInfoArray = midiManager.getDevicesForTransport(MidiManager.TRANSPORT_MIDI_BYTE_STREAM)
+
+        // Fortunately, this still seems to work.
+        val deviceInfoArray = midiManager.getDevices()
+
+        // Log everything we find for starters.
+        for(deviceInfo in deviceInfoArray) {
+            this.logMidiDevice(deviceInfo)
+        }
+
+        // First, look for a device with an input port.  (The device
+        // receives input through the port from us.)
+        var foundDeviceInfo: MidiDeviceInfo? = null
+        for(deviceInfo in deviceInfoArray) {
+            if(deviceInfo.getInputPortCount() > 0 && deviceInfo.getOutputPortCount() > 0) {
+                foundDeviceInfo = deviceInfo
+                break
+            }
+        }
+
+        // Finally, if we found one, kick off the open.  This is asynchronous,
+        // so it's not like we can return the opened device from this call.
+        // Rather, the calling code will check back with us periodically to
+        // see if the open actually succeeded.
+        if(foundDeviceInfo != null) {
+            Log.d("kickOffMidiDeviceOpen", "CHOSEN DEVICE FOLLOWS...")
+            this.logMidiDevice(foundDeviceInfo)
+            midiManager.openDevice(foundDeviceInfo, this.midiDeviceOpenListener, Handler(Looper.getMainLooper()))
+            return true
+        }
+
+        // Indicate that no open was kicked-off.
+        return false
+    }
+
+    // This function will get called from the C++ side of things periodically
+    // until we have something non-null to return here.
+    fun getOpenedMidiDevice():MidiDevice? {
+        return this.midiDeviceOpenListener.openedDevice
+    }
+
+    // Amazingly, there is no way to finish an activity from the C++ side of
+    // things, so this method has to be called using the JNI.
     fun gameActivityFinished() {
         this.finish()
     }
