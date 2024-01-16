@@ -27,6 +27,7 @@ add_library(gravitymaze SHARED
         AudioSubSystem.cpp
         MidiManager.cpp
         GameRender.cpp
+        GameLogic.cpp
         Options.cpp
         Progress.cpp
         Maze.cpp
