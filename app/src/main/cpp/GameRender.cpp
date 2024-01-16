@@ -1,4 +1,4 @@
-#include "Game.h"
+#include "GameRender.h"
 #include "MazeObject.h"
 #include "MazeObjects/MazeBlock.h"
 #include "MazeObjects/MazeBall.h"
@@ -19,11 +19,11 @@
 
 using namespace PlanarPhysics;
 
-//------------------------------ Game ------------------------------
+//------------------------------ GameRender ------------------------------
 
-Game::Game(android_app* app) : midiManager(app)
+GameRender::GameRender(android_app* app) : midiManager(app)
 {
-    app->onAppCmd = &Game::HandleAndroidCommand;
+    app->onAppCmd = &GameRender::HandleAndroidCommand;
 
     this->debugWinEntireGame = false;
     this->initialized = false;
@@ -40,14 +40,14 @@ Game::Game(android_app* app) : midiManager(app)
     this->lastTime = 0;
 }
 
-/*virtual*/ Game::~Game()
+/*virtual*/ GameRender::~GameRender()
 {
     delete this->state;
 }
 
-/*static*/ void Game::HandleAndroidCommand(android_app* app, int32_t cmd)
+/*static*/ void GameRender::HandleAndroidCommand(android_app* app, int32_t cmd)
 {
-    Game* game = reinterpret_cast<Game*>(app->userData);
+    GameRender* game = reinterpret_cast<GameRender*>(app->userData);
 
     switch (cmd)
     {
@@ -87,7 +87,7 @@ Game::Game(android_app* app) : midiManager(app)
     }
 }
 
-/*static*/ bool Game::MotionEventFilter(const GameActivityMotionEvent* motionEvent)
+/*static*/ bool GameRender::MotionEventFilter(const GameActivityMotionEvent* motionEvent)
 {
     int sourceClass = motionEvent->source & AINPUT_SOURCE_CLASS_MASK;
     return sourceClass == AINPUT_SOURCE_CLASS_POINTER || sourceClass == AINPUT_SOURCE_CLASS_JOYSTICK;
@@ -100,7 +100,7 @@ Game::Game(android_app* app) : midiManager(app)
 //       world entirely.
 // Note that we don't setup our window stuff here, because there may not be a window yet.
 // Furthermore, the window can come and go while the game is setup.
-bool Game::Setup()
+bool GameRender::Setup()
 {
     if(this->initialized)
     {
@@ -110,7 +110,7 @@ bool Game::Setup()
 
     this->app->userData = this;
 
-    android_app_set_motion_event_filter(this->app, &Game::MotionEventFilter);
+    android_app_set_motion_event_filter(this->app, &GameRender::MotionEventFilter);
 
     // We need to do this, because the game doesn't take any input from swipes or touches.
     // TODO: Why doesn't this work?  :(
@@ -190,7 +190,7 @@ bool Game::Setup()
     return true;
 }
 
-bool Game::Shutdown()
+bool GameRender::Shutdown()
 {
     this->SetState(nullptr);
 
@@ -221,7 +221,7 @@ bool Game::Shutdown()
     return true;
 }
 
-bool Game::SetupWindow()
+bool GameRender::SetupWindow()
 {
     this->display = eglGetDisplay(EGL_DEFAULT_DISPLAY);
     if(this->display == EGL_NO_DISPLAY)
@@ -309,7 +309,7 @@ bool Game::SetupWindow()
     return true;
 }
 
-bool Game::ShutdownWindow()
+bool GameRender::ShutdownWindow()
 {
     this->drawHelper.Shutdown();
 
@@ -336,12 +336,12 @@ bool Game::ShutdownWindow()
     return true;
 }
 
-double Game::GetSurfaceAspectRatio() const
+double GameRender::GetSurfaceAspectRatio() const
 {
     return double(this->surfaceWidth) / double(this->surfaceHeight);
 }
 
-void Game::HandleSensorEvent(void* data)
+void GameRender::HandleSensorEvent(void* data)
 {
     ASensorEvent sensorEvent;
     if(ASensorEventQueue_getEvents(this->sensorEventQueue, &sensorEvent, 1) > 0)
@@ -366,7 +366,7 @@ void Game::HandleSensorEvent(void* data)
     }
 }
 
-void Game::HandleTapEvents()
+void GameRender::HandleTapEvents()
 {
     struct android_input_buffer* inputBuffer = android_app_swap_input_buffers(this->app);
     if (!inputBuffer)
@@ -410,7 +410,7 @@ void Game::HandleTapEvents()
 //       that maybe it would be worth looking into a dedicated
 //       render thread.  Note that you could double-buffer the
 //       dynamic vertex buffer.
-bool Game::Tick()
+bool GameRender::Tick()
 {
     clock_t currentTime = ::clock();
     double frameRate = 0.0;
@@ -434,7 +434,7 @@ bool Game::Tick()
     {
         switch(id)
         {
-            case Game::SENSOR_EVENT_ID:
+            case GameRender::SENSOR_EVENT_ID:
             {
                 this->HandleSensorEvent(data);
                 break;
@@ -531,7 +531,7 @@ bool Game::Tick()
     return !this->app->destroyRequested;
 }
 
-void Game::SetState(State* newState)
+void GameRender::SetState(State* newState)
 {
     if(this->state)
     {
@@ -545,58 +545,58 @@ void Game::SetState(State* newState)
         this->state->Enter();
 }
 
-//------------------------------ Game::State ------------------------------
+//------------------------------ GameRender::State ------------------------------
 
-Game::State::State(Game* game)
+GameRender::State::State(GameRender* game)
 {
     this->game = game;
 }
 
-/*virtual*/ Game::State::~State()
+/*virtual*/ GameRender::State::~State()
 {
 }
 
-/*virtual*/ void Game::State::Enter()
+/*virtual*/ void GameRender::State::Enter()
 {
 }
 
-/*virtual*/ void Game::State::Leave()
+/*virtual*/ void GameRender::State::Leave()
 {
 }
 
-/*virtual*/ Game::State* Game::State::Tick(double deltaTime)
+/*virtual*/ GameRender::State* GameRender::State::Tick(double deltaTime)
 {
     return this;
 }
 
-/*virtual*/ double Game::State::GetTransitionAlpha() const
+/*virtual*/ double GameRender::State::GetTransitionAlpha() const
 {
     return 1.0;
 }
 
-/*virtual*/ void Game::State::Render(DrawHelper& drawHelper) const
+/*virtual*/ void GameRender::State::Render(DrawHelper& drawHelper) const
 {
 }
 
-//------------------------------ Game::GenerateMazeState ------------------------------
+//------------------------------ GameRender::GenerateMazeState ------------------------------
 
-Game::GenerateMazeState::GenerateMazeState(Game* game) : State(game)
+GameRender::GenerateMazeState::GenerateMazeState(GameRender* game) : State(game)
 {
 }
 
-/*virtual*/ Game::GenerateMazeState::~GenerateMazeState()
+/*virtual*/ GameRender::GenerateMazeState::~GenerateMazeState()
 {
 }
 
-/*virtual*/ void Game::GenerateMazeState::Enter()
+/*virtual*/ void GameRender::GenerateMazeState::Enter()
 {
 }
 
-/*virtual*/ void Game::GenerateMazeState::Leave()
+/*virtual*/ void GameRender::GenerateMazeState::Leave()
 {
 }
 
-/*virtual*/ Game::State* Game::GenerateMazeState::Tick(double deltaTime)
+/*virtual*/ GameRender::State* GameRender::GenerateMazeState::Tick(double deltaTime)
 {
     if(this->game->display == EGL_NO_DISPLAY)
         return this;
@@ -629,19 +629,19 @@ Game::GenerateMazeState::GenerateMazeState(Game* game) : State(game)
     return new FlyMazeInState(this->game);
 }
 
-//------------------------------ Game::FlyMazeInState ------------------------------
+//------------------------------ GameRender::FlyMazeInState ------------------------------
 
-Game::FlyMazeInState::FlyMazeInState(Game* game) : State(game)
+GameRender::FlyMazeInState::FlyMazeInState(GameRender* game) : State(game)
 {
     this->animRate = 1.0;
     this->transitionAlpha = 0.0;
 }
 
-/*virtual*/ Game::FlyMazeInState::~FlyMazeInState()
+/*virtual*/ GameRender::FlyMazeInState::~FlyMazeInState()
 {
 }
 
-/*virtual*/ void Game::FlyMazeInState::Enter()
+/*virtual*/ void GameRender::FlyMazeInState::Enter()
 {
     this->transitionAlpha = 0.0;
 
@@ -682,11 +682,11 @@ Game::FlyMazeInState::FlyMazeInState(Game* game) : State(game)
     }
 }
 
-/*virtual*/ void Game::FlyMazeInState::Leave()
+/*virtual*/ void GameRender::FlyMazeInState::Leave()
 {
 }
 
-/*virtual*/ Game::State* Game::FlyMazeInState::Tick(double deltaTime)
+/*virtual*/ GameRender::State* GameRender::FlyMazeInState::Tick(double deltaTime)
 {
     this->transitionAlpha += this->animRate * deltaTime;
     if(this->transitionAlpha > 1.0)
@@ -695,24 +695,24 @@ Game::FlyMazeInState::FlyMazeInState(Game* game) : State(game)
     return this;
 }
 
-/*virtual*/ double Game::FlyMazeInState::GetTransitionAlpha() const
+/*virtual*/ double GameRender::FlyMazeInState::GetTransitionAlpha() const
 {
     return this->transitionAlpha;
 }
 
-//------------------------------ Game::FlyMazeOutState ------------------------------
+//------------------------------ GameRender::FlyMazeOutState ------------------------------
 
-Game::FlyMazeOutState::FlyMazeOutState(Game* game) : State(game)
+GameRender::FlyMazeOutState::FlyMazeOutState(GameRender* game) : State(game)
 {
     this->animRate = 1.0;
     this->transitionAlpha = 0.0;
 }
 
-/*virtual*/ Game::FlyMazeOutState::~FlyMazeOutState()
+/*virtual*/ GameRender::FlyMazeOutState::~FlyMazeOutState()
 {
 }
 
-/*virtual*/ void Game::FlyMazeOutState::Enter()
+/*virtual*/ void GameRender::FlyMazeOutState::Enter()
 {
     Engine& physicsEngine = this->game->physicsWorld;
 
@@ -735,11 +735,11 @@ Game::FlyMazeOutState::FlyMazeOutState(Game* game) : State(game)
     }
 }
 
-/*virtual*/ void Game::FlyMazeOutState::Leave()
+/*virtual*/ void GameRender::FlyMazeOutState::Leave()
 {
 }
 
-/*virtual*/ Game::State* Game::FlyMazeOutState::Tick(double deltaTime)
+/*virtual*/ GameRender::State* GameRender::FlyMazeOutState::Tick(double deltaTime)
 {
     this->transitionAlpha += this->animRate * deltaTime;
     if(this->transitionAlpha > 1.0)
@@ -754,30 +754,30 @@ Game::FlyMazeOutState::FlyMazeOutState(Game* game) : State(game)
     return this;
 }
 
-/*virtual*/ double Game::FlyMazeOutState::GetTransitionAlpha() const
+/*virtual*/ double GameRender::FlyMazeOutState::GetTransitionAlpha() const
 {
     return this->transitionAlpha;
 }
 
-//------------------------------ Game::PlayGameState ------------------------------
+//------------------------------ GameRender::PlayGameState ------------------------------
 
-Game::PlayGameState::PlayGameState(Game* game) : State(game)
+GameRender::PlayGameState::PlayGameState(GameRender* game) : State(game)
 {
 }
 
-/*virtual*/ Game::PlayGameState::~PlayGameState()
+/*virtual*/ GameRender::PlayGameState::~PlayGameState()
 {
 }
 
-/*virtual*/ void Game::PlayGameState::Enter()
+/*virtual*/ void GameRender::PlayGameState::Enter()
 {
 }
 
-/*virtual*/ void Game::PlayGameState::Leave()
+/*virtual*/ void GameRender::PlayGameState::Leave()
 {
 }
 
-/*virtual*/ Game::State* Game::PlayGameState::Tick(double deltaTime)
+/*virtual*/ GameRender::State* GameRender::PlayGameState::Tick(double deltaTime)
 {
     if(this->game->physicsWorld.IsMazeSolved() || this->game->debugWinEntireGame)
     {
@@ -796,17 +796,17 @@ Game::PlayGameState::PlayGameState(Game* game) : State(game)
     return this;
 }
 
-//------------------------------ Game::GameWonState ------------------------------
+//------------------------------ GameRender::GameWonState ------------------------------
 
-Game::GameWonState::GameWonState(Game* game) : State(game)
+GameRender::GameWonState::GameWonState(GameRender* game) : State(game)
 {
 }
 
-/*virtual*/ Game::GameWonState::~GameWonState()
+/*virtual*/ GameRender::GameWonState::~GameWonState()
 {
 }
 
-/*virtual*/ void Game::GameWonState::Enter()
+/*virtual*/ void GameRender::GameWonState::Enter()
 {
     Engine& physicsEngine = this->game->physicsWorld;
 
@@ -825,21 +825,21 @@ Game::GameWonState::GameWonState(Game* game) : State(game)
     }
 }
 
-/*virtual*/ void Game::GameWonState::Leave()
+/*virtual*/ void GameRender::GameWonState::Leave()
 {
 }
 
-/*virtual*/ double Game::GameWonState::GetTransitionAlpha() const
+/*virtual*/ double GameRender::GameWonState::GetTransitionAlpha() const
 {
     return 1.0;
 }
 
-/*virtual*/ Game::State* Game::GameWonState::Tick(double deltaTime)
+/*virtual*/ GameRender::State* GameRender::GameWonState::Tick(double deltaTime)
 {
     return this;
 }
 
-/*virtual*/ void Game::GameWonState::Render(DrawHelper& drawHelper) const
+/*virtual*/ void GameRender::GameWonState::Render(DrawHelper& drawHelper) const
 {
     Engine& physicsEngine = this->game->physicsWorld;
 
@@ -854,22 +854,22 @@ Game::GameWonState::GameWonState(Game* game) : State(game)
     //       Where could I host such a database?  Not for free, certainly, so maybe I won't bother.
 }
 
-//------------------------------ Game::PhysicsWorld ------------------------------
+//------------------------------ GameRender::PhysicsWorld ------------------------------
 
-Game::PhysicsWorld::PhysicsWorld()
+GameRender::PhysicsWorld::PhysicsWorld()
 {
 }
 
-/*virtual*/ Game::PhysicsWorld::~PhysicsWorld()
+/*virtual*/ GameRender::PhysicsWorld::~PhysicsWorld()
 {
 }
 
-bool Game::PhysicsWorld::IsMazeSolved()
+bool GameRender::PhysicsWorld::IsMazeSolved()
 {
     return this->GetGoodMazeBlockCount() == this->GetGoodMazeBlockTouchedCount() && this->QueenDeadOrNonExistent();
 }
 
-int Game::PhysicsWorld::GetGoodMazeBlockCount()
+int GameRender::PhysicsWorld::GetGoodMazeBlockCount()
 {
     int count = 0;
     for(auto planarObject : this->GetPlanarObjectArray())
@@ -879,7 +879,7 @@ int Game::PhysicsWorld::GetGoodMazeBlockCount()
     return count;
 }
 
-int Game::PhysicsWorld::GetGoodMazeBlockTouchedCount()
+int GameRender::PhysicsWorld::GetGoodMazeBlockTouchedCount()
 {
     int count = 0;
 
@@ -893,13 +893,13 @@ int Game::PhysicsWorld::GetGoodMazeBlockTouchedCount()
     return count;
 }
 
-bool Game::PhysicsWorld::QueenDeadOrNonExistent()
+bool GameRender::PhysicsWorld::QueenDeadOrNonExistent()
 {
     MazeQueen* mazeQueen = this->FindTheQueen();
     return !mazeQueen || !mazeQueen->alive;
 }
 
-MazeQueen* Game::PhysicsWorld::FindTheQueen()
+MazeQueen* GameRender::PhysicsWorld::FindTheQueen()
 {
     for(auto planarObject : this->GetPlanarObjectArray())
     {

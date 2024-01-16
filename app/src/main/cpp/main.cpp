@@ -1,6 +1,6 @@
 #include <jni.h>
 #include "AndroidOut.h"
-#include "Game.h"
+#include "GameRender.h"
 #include <game-activity/GameActivity.cpp>
 #include <game-text-input/gametextinput.cpp>
 
@@ -24,7 +24,7 @@ void android_main(struct android_app* app)
     //       much time away from family and work (time I just don't have) on this stupid
     //       program that is just a complete waste of time.
 
-    Game* game = new Game(app);
+    GameRender* game = new GameRender(app);
     game->Setup();
 
     while(game->Tick())

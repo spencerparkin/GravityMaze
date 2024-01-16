@@ -19,11 +19,11 @@ class MazeQueen;
 
 #define FINAL_GRAVITY_MAZE_LEVEL        40
 
-class Game
+class GameRender
 {
 public:
-    Game(android_app* app);
-    virtual ~Game();
+    GameRender(android_app* app);
+    virtual ~GameRender();
 
     bool Setup();
     bool Shutdown();
@@ -43,7 +43,7 @@ public:
     class State
     {
     public:
-        State(Game* game);
+        State(GameRender* game);
         virtual ~State();
 
         virtual void Enter();
@@ -52,13 +52,13 @@ public:
         virtual double GetTransitionAlpha() const;
         virtual void Render(DrawHelper& drawHelper) const;
 
-        Game* game;
+        GameRender* game;
     };
 
     class GenerateMazeState : public State
     {
     public:
-        GenerateMazeState(Game* game);
+        GenerateMazeState(GameRender* game);
         virtual ~GenerateMazeState();
 
         virtual void Enter() override;
@@ -69,7 +69,7 @@ public:
     class FlyMazeInState : public State
     {
     public:
-        FlyMazeInState(Game* game);
+        FlyMazeInState(GameRender* game);
         virtual ~FlyMazeInState();
 
         virtual void Enter() override;
@@ -84,7 +84,7 @@ public:
     class FlyMazeOutState : public State
     {
     public:
-        FlyMazeOutState(Game* game);
+        FlyMazeOutState(GameRender* game);
         virtual ~FlyMazeOutState();
 
         virtual void Enter() override;
@@ -99,7 +99,7 @@ public:
     class PlayGameState : public State
     {
     public:
-        PlayGameState(Game* game);
+        PlayGameState(GameRender* game);
         virtual ~PlayGameState();
 
         virtual void Enter() override;
@@ -110,7 +110,7 @@ public:
     class GameWonState : public State
     {
     public:
-        GameWonState(Game* game);
+        GameWonState(GameRender* game);
         virtual ~GameWonState();
 
         virtual void Enter() override;
