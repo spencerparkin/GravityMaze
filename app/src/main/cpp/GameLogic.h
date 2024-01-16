@@ -1,126 +1,33 @@
 #pragma once
 
-#include <game-activity/native_app_glue/android_native_app_glue.h>
-#include <EGL/egl.h>
-#include <memory>
-#include <android/sensor.h>
-#include "AudioSubSystem.h"
-#include "MidiManager.h"
-#include "Engine.h"
+#include <pthread.h>
+#include "TimeKeeper.h"
 #include "Maze.h"
-#include "DrawHelper.h"
-#include "Options.h"
-#include "Progress.h"
+#include "MazeObject.h"
+#include "MazeObjects/MazeBlock.h"
+#include "MazeObjects/MazeBall.h"
+#include "MazeObjects/MazeQueen.h"
+#include "Math/GeometricAlgebra/Vector2D.h"
+#include "Math/Utilities/Random.h"
+#include "PlanarObjects/Wall.h"
+#include "PlanarObjects/Ball.h"
+#include "PlanarObjects/RigidBody.h"
 #include "TextRenderer.h"
-
-struct android_app;
-
-class MazeQueen;
+#include "Progress.h"
 
 #define FINAL_GRAVITY_MAZE_LEVEL        40
 
-class Game
+class GameRender;
+
+class GameLogic
 {
 public:
-    Game(android_app* app);
-    virtual ~Game();
+    GameLogic(GameRender* gameRender);
+    virtual ~GameLogic();
 
     bool Setup();
     bool Shutdown();
-    bool SetupWindow();
-    bool ShutdownWindow();
     bool Tick();
-    void HandleSensorEvent(void* data);
-    void HandleTapEvents();
-
-    enum
-    {
-        SENSOR_EVENT_ID = 100
-    };
-
-    const Options& GetOptions() const { return this->options; }
-
-    class State
-    {
-    public:
-        State(Game* game);
-        virtual ~State();
-
-        virtual void Enter();
-        virtual void Leave();
-        virtual State* Tick(double deltaTime);
-        virtual double GetTransitionAlpha() const;
-        virtual void Render(DrawHelper& drawHelper) const;
-
-        Game* game;
-    };
-
-    class GenerateMazeState : public State
-    {
-    public:
-        GenerateMazeState(Game* game);
-        virtual ~GenerateMazeState();
-
-        virtual void Enter() override;
-        virtual void Leave() override;
-        virtual State* Tick(double deltaTime) override;
-    };
-
-    class FlyMazeInState : public State
-    {
-    public:
-        FlyMazeInState(Game* game);
-        virtual ~FlyMazeInState();
-
-        virtual void Enter() override;
-        virtual void Leave() override;
-        virtual State* Tick(double deltaTime) override;
-        virtual double GetTransitionAlpha() const override;
-
-        double animRate;
-        double transitionAlpha;
-    };
-
-    class FlyMazeOutState : public State
-    {
-    public:
-        FlyMazeOutState(Game* game);
-        virtual ~FlyMazeOutState();
-
-        virtual void Enter() override;
-        virtual void Leave() override;
-        virtual State* Tick(double deltaTime) override;
-        virtual double GetTransitionAlpha() const override;
-
-        double animRate;
-        double transitionAlpha;
-    };
-
-    class PlayGameState : public State
-    {
-    public:
-        PlayGameState(Game* game);
-        virtual ~PlayGameState();
-
-        virtual void Enter() override;
-        virtual void Leave() override;
-        virtual State* Tick(double deltaTime) override;
-    };
-
-    class GameWonState : public State
-    {
-    public:
-        GameWonState(Game* game);
-        virtual ~GameWonState();
-
-        virtual void Enter() override;
-        virtual void Leave() override;
-        virtual State* Tick(double deltaTime) override;
-        virtual void Render(DrawHelper& drawHelper) const override;
-        virtual double GetTransitionAlpha() const override;
-    };
-
-    double GetSurfaceAspectRatio() const;
 
     class PhysicsWorld : public PlanarPhysics::Engine
     {
@@ -135,32 +42,100 @@ public:
         MazeQueen* FindTheQueen();
     };
 
-    static void HandleAndroidCommand(android_app* app, int32_t cmd);
-    static bool MotionEventFilter(const GameActivityMotionEvent* motionEvent);
-
 private:
+    class State
+    {
+    public:
+        State(GameLogic* game);
+        virtual ~State();
+
+        virtual void Enter();
+        virtual void Leave();
+        virtual State* Tick(double deltaTime);
+        virtual double GetTransitionAlpha() const;
+        virtual void Render(DrawHelper& drawHelper) const;
+
+        GameLogic* game;
+    };
+
+    class GenerateMazeState : public State
+    {
+    public:
+        GenerateMazeState(GameLogic* game);
+        virtual ~GenerateMazeState();
+
+        virtual void Enter() override;
+        virtual void Leave() override;
+        virtual State* Tick(double deltaTime) override;
+    };
+
+    class FlyMazeInState : public State
+    {
+    public:
+        FlyMazeInState(GameLogic* game);
+        virtual ~FlyMazeInState();
+
+        virtual void Enter() override;
+        virtual void Leave() override;
+        virtual State* Tick(double deltaTime) override;
+        virtual double GetTransitionAlpha() const override;
+
+        double animRate;
+        double transitionAlpha;
+    };
+
+    class FlyMazeOutState : public State
+    {
+    public:
+        FlyMazeOutState(GameLogic* game);
+        virtual ~FlyMazeOutState();
+
+        virtual void Enter() override;
+        virtual void Leave() override;
+        virtual State* Tick(double deltaTime) override;
+        virtual double GetTransitionAlpha() const override;
+
+        double animRate;
+        double transitionAlpha;
+    };
+
+    class PlayGameState : public State
+    {
+    public:
+        PlayGameState(GameLogic* game);
+        virtual ~PlayGameState();
+
+        virtual void Enter() override;
+        virtual void Leave() override;
+        virtual State* Tick(double deltaTime) override;
+    };
+
+    class GameWonState : public State
+    {
+    public:
+        GameWonState(GameLogic* game);
+        virtual ~GameWonState();
+
+        virtual void Enter() override;
+        virtual void Leave() override;
+        virtual State* Tick(double deltaTime) override;
+        virtual void Render(DrawHelper& drawHelper) const override;
+        virtual double GetTransitionAlpha() const override;
+    };
+
+    static void* ThreadEntryPoint(void* arg);
+    void ThreadFunc();
+
+    bool keepTicking;
+    pthread_t threadHandle;
 
     void SetState(State* newState);
 
     State* state;
-    android_app* app;
-    bool initialized;
-    EGLDisplay display;
-    EGLSurface surface;
-    EGLContext context;
-    EGLint surfaceWidth;
-    EGLint surfaceHeight;
     PhysicsWorld physicsWorld;
     Maze maze;
-    DrawHelper drawHelper;
-    ASensorManager* sensorManager;
-    const ASensor* gravitySensor;
-    ASensorEventQueue* sensorEventQueue;
-    Options options;
-    Progress progress;
+    GameRender* gameRender;
     TextRenderer textRenderer;
-    AudioSubSystem audioSubSystem;
-    MidiManager midiManager;
-    clock_t lastTime;
-    bool debugWinEntireGame;    // This variable is only meant to be changed by an attached debugger.
+    Progress progress;
+    TimeKeeper timeKeeper;
 };

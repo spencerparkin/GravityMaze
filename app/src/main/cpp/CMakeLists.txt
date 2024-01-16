@@ -26,7 +26,8 @@ add_library(gravitymaze SHARED
         AndroidOut.cpp
         AudioSubSystem.cpp
         MidiManager.cpp
-        Game.cpp
+        GameRender.cpp
+        GameLogic.cpp
         Options.cpp
         Progress.cpp
         Maze.cpp
@@ -35,6 +36,7 @@ add_library(gravitymaze SHARED
         ShaderProgram.cpp
         DrawHelper.cpp
         TextRenderer.cpp
+        TimeKeeper.cpp
         MazeObject.cpp
         MazeObjects/MazeBall.cpp
         MazeObjects/MazeWall.cpp

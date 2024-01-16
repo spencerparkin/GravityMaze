@@ -3,7 +3,7 @@
 #include "MazeQueen.h"
 #include "Math/Utilities/Random.h"
 #include "../DrawHelper.h"
-#include "../Game.h"
+#include "../GameLogic.h"
 
 using namespace PlanarPhysics;
 
@@ -70,7 +70,7 @@ MazeWorm::MazeWorm()
     auto mazeQueen = dynamic_cast<MazeQueen*>(planarObject);
     if(mazeQueen)
     {
-        auto physicsWorld = dynamic_cast<Game::PhysicsWorld*>(engine);
+        auto physicsWorld = dynamic_cast<GameLogic::PhysicsWorld*>(engine);
         if(physicsWorld)
         {
             if(physicsWorld->GetGoodMazeBlockCount() == physicsWorld->GetGoodMazeBlockTouchedCount())
