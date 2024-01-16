@@ -10,15 +10,12 @@
 #include "Maze.h"
 #include "DrawHelper.h"
 #include "Options.h"
-#include "Progress.h"
-#include "TextRenderer.h"
+#include "TimeKeeper.h"
+#include "Math/GeometricAlgebra/Vector2D.h"
 
 struct android_app;
 
-class MazeQueen;
-
-#define FINAL_GRAVITY_MAZE_LEVEL        40
-
+// We don't just render here; we also handle sensor input and audio output.
 class GameRender
 {
 public:
@@ -38,111 +35,21 @@ public:
         SENSOR_EVENT_ID = 100
     };
 
-    const Options& GetOptions() const { return this->options; }
-
-    class State
-    {
-    public:
-        State(GameRender* game);
-        virtual ~State();
-
-        virtual void Enter();
-        virtual void Leave();
-        virtual State* Tick(double deltaTime);
-        virtual double GetTransitionAlpha() const;
-        virtual void Render(DrawHelper& drawHelper) const;
-
-        GameRender* game;
-    };
-
-    class GenerateMazeState : public State
-    {
-    public:
-        GenerateMazeState(GameRender* game);
-        virtual ~GenerateMazeState();
-
-        virtual void Enter() override;
-        virtual void Leave() override;
-        virtual State* Tick(double deltaTime) override;
-    };
-
-    class FlyMazeInState : public State
-    {
-    public:
-        FlyMazeInState(GameRender* game);
-        virtual ~FlyMazeInState();
-
-        virtual void Enter() override;
-        virtual void Leave() override;
-        virtual State* Tick(double deltaTime) override;
-        virtual double GetTransitionAlpha() const override;
-
-        double animRate;
-        double transitionAlpha;
-    };
-
-    class FlyMazeOutState : public State
-    {
-    public:
-        FlyMazeOutState(GameRender* game);
-        virtual ~FlyMazeOutState();
-
-        virtual void Enter() override;
-        virtual void Leave() override;
-        virtual State* Tick(double deltaTime) override;
-        virtual double GetTransitionAlpha() const override;
-
-        double animRate;
-        double transitionAlpha;
-    };
-
-    class PlayGameState : public State
-    {
-    public:
-        PlayGameState(GameRender* game);
-        virtual ~PlayGameState();
-
-        virtual void Enter() override;
-        virtual void Leave() override;
-        virtual State* Tick(double deltaTime) override;
-    };
-
-    class GameWonState : public State
-    {
-    public:
-        GameWonState(GameRender* game);
-        virtual ~GameWonState();
-
-        virtual void Enter() override;
-        virtual void Leave() override;
-        virtual State* Tick(double deltaTime) override;
-        virtual void Render(DrawHelper& drawHelper) const override;
-        virtual double GetTransitionAlpha() const override;
-    };
-
-    double GetSurfaceAspectRatio() const;
-
-    class PhysicsWorld : public PlanarPhysics::Engine
-    {
-    public:
-        PhysicsWorld();
-        virtual ~PhysicsWorld();
-
-        bool IsMazeSolved();
-        int GetGoodMazeBlockCount();
-        int GetGoodMazeBlockTouchedCount();
-        bool QueenDeadOrNonExistent();
-        MazeQueen* FindTheQueen();
-    };
+    Options& GetOptions() { return this->options; }
+    android_app* GetApp() { return this->app; }
 
     static void HandleAndroidCommand(android_app* app, int32_t cmd);
     static bool MotionEventFilter(const GameActivityMotionEvent* motionEvent);
 
+    bool CanRender();
+
+    DrawHelper* GetDrawHelper() { return &this->drawHelper; }
+    double GetAspectRatio() const;
+
+    const PlanarPhysics::Vector2D& GetGravityVector() const { return this->gravityVector; }
+
 private:
 
-    void SetState(State* newState);
-
-    State* state;
     android_app* app;
     bool initialized;
     EGLDisplay display;
@@ -150,17 +57,13 @@ private:
     EGLContext context;
     EGLint surfaceWidth;
     EGLint surfaceHeight;
-    PhysicsWorld physicsWorld;
-    Maze maze;
     DrawHelper drawHelper;
     ASensorManager* sensorManager;
     const ASensor* gravitySensor;
     ASensorEventQueue* sensorEventQueue;
     Options options;
-    Progress progress;
-    TextRenderer textRenderer;
     AudioSubSystem audioSubSystem;
     MidiManager midiManager;
-    clock_t lastTime;
-    bool debugWinEntireGame;    // This variable is only meant to be changed by an attached debugger.
+    TimeKeeper timeKeeper;
+    PlanarPhysics::Vector2D gravityVector;
 };

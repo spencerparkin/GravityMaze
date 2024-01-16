@@ -16,7 +16,7 @@ void android_main(struct android_app* app)
     GameRender* gameRender = new GameRender(app);
     gameRender->Setup();
 
-    GameLogic* gameLogic = new GameLogic();
+    GameLogic* gameLogic = new GameLogic(gameRender);
     gameLogic->Setup();
 
     while(gameRender->Tick())

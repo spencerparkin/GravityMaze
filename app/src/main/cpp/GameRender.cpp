@@ -1,13 +1,4 @@
 #include "GameRender.h"
-#include "MazeObject.h"
-#include "MazeObjects/MazeBlock.h"
-#include "MazeObjects/MazeBall.h"
-#include "MazeObjects/MazeQueen.h"
-#include "Math/GeometricAlgebra/Vector2D.h"
-#include "Math/Utilities/Random.h"
-#include "PlanarObjects/Wall.h"
-#include "PlanarObjects/Ball.h"
-#include "PlanarObjects/RigidBody.h"
 #include <android/window.h>
 #include <android/native_activity.h>
 #include <GLES3/gl3.h>
@@ -25,7 +16,6 @@ GameRender::GameRender(android_app* app) : midiManager(app)
 {
     app->onAppCmd = &GameRender::HandleAndroidCommand;
 
-    this->debugWinEntireGame = false;
     this->initialized = false;
     this->app = app;
     this->display = EGL_NO_DISPLAY;
@@ -36,48 +26,34 @@ GameRender::GameRender(android_app* app) : midiManager(app)
     this->sensorManager = nullptr;
     this->gravitySensor = nullptr;
     this->sensorEventQueue = nullptr;
-    this->state = nullptr;
-    this->lastTime = 0;
 }
 
 /*virtual*/ GameRender::~GameRender()
 {
-    delete this->state;
 }
 
 /*static*/ void GameRender::HandleAndroidCommand(android_app* app, int32_t cmd)
 {
-    GameRender* game = reinterpret_cast<GameRender*>(app->userData);
+    GameRender* gameRender = reinterpret_cast<GameRender*>(app->userData);
 
     switch (cmd)
     {
         case APP_CMD_INIT_WINDOW:
         {
-            if(game && !game->SetupWindow())
-                game->ShutdownWindow();
+            if(gameRender && !gameRender->SetupWindow())
+                gameRender->ShutdownWindow();
 
             break;
         }
         case APP_CMD_TERM_WINDOW:
         {
-            if(game)
-            {
-                game->progress.SetTouches(game->physicsWorld.GetGoodMazeBlockTouchedCount());
-                game->progress.Save(app);
-
-                game->ShutdownWindow();
-            }
+            if(gameRender)
+                gameRender->ShutdownWindow();
 
             break;
         }
         case APP_CMD_DESTROY:
         {
-            if(game)
-            {
-                game->progress.SetTouches(game->physicsWorld.GetGoodMazeBlockTouchedCount());
-                game->progress.Save(app);
-            }
-
             break;
         }
         default:
@@ -184,22 +160,15 @@ bool GameRender::Setup()
         return false;
     }
 
-    this->SetState(new GenerateMazeState(this));
-
     this->initialized = true;
     return true;
 }
 
 bool GameRender::Shutdown()
 {
-    this->SetState(nullptr);
-
     this->midiManager.Abort();
 
     this->ShutdownWindow();
-
-    this->maze.Clear();
-    this->physicsWorld.Clear();
 
     if(this->sensorEventQueue)
     {
@@ -336,9 +305,9 @@ bool GameRender::ShutdownWindow()
     return true;
 }
 
-double GameRender::GetSurfaceAspectRatio() const
+bool GameRender::CanRender()
 {
-    return double(this->surfaceWidth) / double(this->surfaceHeight);
+    return this->display != EGL_NO_DISPLAY;
 }
 
 void GameRender::HandleSensorEvent(void* data)
@@ -352,14 +321,12 @@ void GameRender::HandleSensorEvent(void* data)
             {
                 //aout << "Gravity sensed: " << sensorEvent.vector.x << ", " << sensorEvent.vector.y << ", " << sensorEvent.vector.z << std::endl;
 
-                Vector2D gravityVector(-sensorEvent.vector.x, -sensorEvent.vector.y);
-                if(!gravityVector.Normalize())
-                    gravityVector = Vector2D(0.0, 0.0);
+                Vector2D vector(-sensorEvent.vector.x, -sensorEvent.vector.y);
+                if(!vector.Normalize())
+                    vector = Vector2D(0.0, 0.0);
 
-                double gravityAccel = this->options.gravity;
-                gravityVector *= gravityAccel * ::sqrt(::abs(1.0 - ::abs(sensorEvent.vector.z / 9.8)));
-
-                this->physicsWorld.accelerationDueToGravity = gravityVector;
+                // I suppose the game thread could read this value when it has only been partially written.  Hmmm...
+                this->gravityVector = vector * this->options.gravity * ::sqrt(::abs(1.0 - ::abs(sensorEvent.vector.z / 9.8)));
                 break;
             }
         }
@@ -397,30 +364,9 @@ void GameRender::HandleTapEvents()
     android_app_clear_motion_events(inputBuffer);
 }
 
-// TODO: Can we off-load the rendering to its own thread?
-//       That's what's slowing MIDI and physics/animation down.
-//       Play with this.  If we comment out rendering, does
-//       the music play fine while in app?  Okay, I played with
-//       this and it is clear to me that it is the render that
-//       is slowing everything down.  The the physics, or music
-//       or preparing what we want to render or even creating
-//       the vertex buffers.  It's the GL-swap buffer call that's
-//       killing the performance.  But then why does our FPS seem
-//       high most of the time?  It's confusing, but all I know is
-//       that maybe it would be worth looking into a dedicated
-//       render thread.  Note that you could double-buffer the
-//       dynamic vertex buffer.
 bool GameRender::Tick()
 {
-    clock_t currentTime = ::clock();
-    double frameRate = 0.0;
-    double elapsedTime = 0.0;
-    if(this->lastTime != 0)
-    {
-        elapsedTime = double(currentTime - this->lastTime) / double(CLOCKS_PER_SEC);
-        frameRate = 1.0 / elapsedTime;
-    }
-    this->lastTime = currentTime;
+    this->timeKeeper.Tick();
 
     this->HandleTapEvents();
 
@@ -447,17 +393,6 @@ bool GameRender::Tick()
                 break;
             }
         }
-    }
-
-    // Don't advance the physics unless we're also able to render it.
-    if(this->display != EGL_NO_DISPLAY)
-        this->physicsWorld.Tick();
-
-    if(this->state)
-    {
-        State* newState = this->state->Tick(elapsedTime);
-        if(newState != this->state)
-            this->SetState(newState);
     }
 
     android_input_buffer* inputBuffer = android_app_swap_input_buffers(this->app);
@@ -489,41 +424,9 @@ bool GameRender::Tick()
     {
         glClear(GL_COLOR_BUFFER_BIT);
 
-        double transitionAlpha = this->state ? this->state->GetTransitionAlpha() : 0.0;
+        this->drawHelper.Render();
 
-        double aspectRatio = double(this->surfaceWidth) / double(this->surfaceHeight);
-        this->drawHelper.BeginRender(&this->physicsWorld, aspectRatio);
-
-        const std::vector<PlanarObject*> &planarObjectArray = this->physicsWorld.GetPlanarObjectArray();
-        for (const PlanarObject* planarObject: planarObjectArray)
-        {
-            auto mazeObject = dynamic_cast<const MazeObject*>(planarObject);
-            if (mazeObject)
-            {
-                mazeObject->Render(this->drawHelper, transitionAlpha);
-            }
-        }
-
-        Transform textTransform;
-        textTransform.scale = (this->progress.GetLevel() < 5) ? (MAZE_CELL_SIZE / 4.0) : (MAZE_CELL_SIZE / 2.0);
-        char text[64];
-        Color textColor;
-        const BoundingBox &worldBox = this->physicsWorld.GetWorldBox();
-
-        textTransform.translation = Vector2D(worldBox.min.x, worldBox.max.y);
-        sprintf(text, "Level %d", this->progress.GetLevel());
-        textColor = Color(1.0, 1.0, 1.0);
-        this->textRenderer.RenderText(text, textTransform, textColor, this->drawHelper);
-
-        textTransform.translation = Vector2D(worldBox.min.y, worldBox.min.y - textTransform.scale);
-        sprintf(text, "FPS = %06.2f", frameRate);
-        textColor = (frameRate < 60) ? ((frameRate < 30) ? Color(1.0, 0.0, 0.0) : Color(1.0, 1.0, 0.0)) : Color(0.0, 1.0, 0.0);
-        this->textRenderer.RenderText(text, textTransform, textColor, this->drawHelper);
-
-        this->state->Render(drawHelper);
-
-        this->drawHelper.EndRender();
-
+        // This call can sometimes block for a long time.
         auto swapResult = eglSwapBuffers(this->display, this->surface);
         assert(swapResult == EGL_TRUE);
     }
@@ -531,382 +434,10 @@ bool GameRender::Tick()
     return !this->app->destroyRequested;
 }
 
-void GameRender::SetState(State* newState)
+double GameRender::GetAspectRatio() const
 {
-    if(this->state)
-    {
-        this->state->Leave();
-        delete this->state;
-    }
+    if(this->surfaceHeight == 0)
+        return 0.0;
 
-    this->state = newState;
-
-    if(this->state)
-        this->state->Enter();
-}
-
-//------------------------------ GameRender::State ------------------------------
-
-GameRender::State::State(GameRender* game)
-{
-    this->game = game;
-}
-
-/*virtual*/ GameRender::State::~State()
-{
-}
-
-/*virtual*/ void GameRender::State::Enter()
-{
-}
-
-/*virtual*/ void GameRender::State::Leave()
-{
-}
-
-/*virtual*/ GameRender::State* GameRender::State::Tick(double deltaTime)
-{
-    return this;
-}
-
-/*virtual*/ double GameRender::State::GetTransitionAlpha() const
-{
-    return 1.0;
-}
-
-/*virtual*/ void GameRender::State::Render(DrawHelper& drawHelper) const
-{
-}
-
-//------------------------------ GameRender::GenerateMazeState ------------------------------
-
-GameRender::GenerateMazeState::GenerateMazeState(GameRender* game) : State(game)
-{
-}
-
-/*virtual*/ GameRender::GenerateMazeState::~GenerateMazeState()
-{
-}
-
-/*virtual*/ void GameRender::GenerateMazeState::Enter()
-{
-}
-
-/*virtual*/ void GameRender::GenerateMazeState::Leave()
-{
-}
-
-/*virtual*/ GameRender::State* GameRender::GenerateMazeState::Tick(double deltaTime)
-{
-    if(this->game->display == EGL_NO_DISPLAY)
-        return this;
-
-    Maze& maze = this->game->maze;
-    Engine& physicsEngine = this->game->physicsWorld;
-    Options& options = this->game->options;
-    Progress& progress = this->game->progress;
-
-    maze.Clear();
-
-    if(!progress.Load(this->game->app))
-    {
-        aout << "Failed to load progress!" << std::endl;
-        progress.Reset();
-    }
-
-    int level = progress.GetLevel();
-    int rows = level + 5;
-    int cols = (int)::round(double(rows) * this->game->GetSurfaceAspectRatio());
-
-    aout << "Level " << level << " is a maze of size " << rows << " by " << cols << "." << std::endl;
-
-    bool queen = (level == FINAL_GRAVITY_MAZE_LEVEL);
-    maze.Generate(rows, cols, progress.GetSeedModifier());
-    maze.PopulatePhysicsWorld(&physicsEngine, progress.GetTouches(), queen, options.bounce);
-
-    physicsEngine.accelerationDueToGravity = Vector2D(0.0, -options.gravity);
-
-    return new FlyMazeInState(this->game);
-}
-
-//------------------------------ GameRender::FlyMazeInState ------------------------------
-
-GameRender::FlyMazeInState::FlyMazeInState(GameRender* game) : State(game)
-{
-    this->animRate = 1.0;
-    this->transitionAlpha = 0.0;
-}
-
-/*virtual*/ GameRender::FlyMazeInState::~FlyMazeInState()
-{
-}
-
-/*virtual*/ void GameRender::FlyMazeInState::Enter()
-{
-    this->transitionAlpha = 0.0;
-
-    Engine& physicsEngine = this->game->physicsWorld;
-
-    const BoundingBox& worldBox = physicsEngine.GetWorldBox();
-
-    Random::Seed((unsigned)::time(nullptr));
-
-    Vector2D verticalTranslation(0.0, worldBox.Height());
-    Vector2D horizontalTranslation(worldBox.Width(), 0.0);
-    Vector2D diagATranslation(worldBox.Width(), worldBox.Height());
-    Vector2D diagBTranslation(worldBox.Width(), -worldBox.Height());
-
-    std::vector<BoundingBox> outerWorldBoxArray;
-    outerWorldBoxArray.push_back(worldBox.Translated(verticalTranslation));
-    outerWorldBoxArray.push_back(worldBox.Translated(-verticalTranslation));
-    outerWorldBoxArray.push_back(worldBox.Translated(horizontalTranslation));
-    outerWorldBoxArray.push_back(worldBox.Translated(-horizontalTranslation));
-    outerWorldBoxArray.push_back(worldBox.Translated(diagATranslation));
-    outerWorldBoxArray.push_back(worldBox.Translated(-diagATranslation));
-    outerWorldBoxArray.push_back(worldBox.Translated(diagBTranslation));
-    outerWorldBoxArray.push_back(worldBox.Translated(-diagBTranslation));
-
-    const std::vector<PlanarObject*>& planarObjectArray = physicsEngine.GetPlanarObjectArray();
-    for(PlanarObject* planarObject : planarObjectArray)
-    {
-        MazeObject* mazeObject = dynamic_cast<MazeObject*>(planarObject);
-        if(mazeObject)
-        {
-            int i = Random::Integer(0, outerWorldBoxArray.size() - 1);
-            double angle = Random::Number(0.0, 2.0 * PLNR_PHY_PI);
-            mazeObject->sourceTransform.Identity();
-            mazeObject->sourceTransform.translation = outerWorldBoxArray[i].RandomPoint();
-            mazeObject->sourceTransform.rotation = PScalar2D(angle).Exponent();
-            mazeObject->targetTransform.Identity();
-        }
-    }
-}
-
-/*virtual*/ void GameRender::FlyMazeInState::Leave()
-{
-}
-
-/*virtual*/ GameRender::State* GameRender::FlyMazeInState::Tick(double deltaTime)
-{
-    this->transitionAlpha += this->animRate * deltaTime;
-    if(this->transitionAlpha > 1.0)
-        return new PlayGameState(this->game);
-
-    return this;
-}
-
-/*virtual*/ double GameRender::FlyMazeInState::GetTransitionAlpha() const
-{
-    return this->transitionAlpha;
-}
-
-//------------------------------ GameRender::FlyMazeOutState ------------------------------
-
-GameRender::FlyMazeOutState::FlyMazeOutState(GameRender* game) : State(game)
-{
-    this->animRate = 1.0;
-    this->transitionAlpha = 0.0;
-}
-
-/*virtual*/ GameRender::FlyMazeOutState::~FlyMazeOutState()
-{
-}
-
-/*virtual*/ void GameRender::FlyMazeOutState::Enter()
-{
-    Engine& physicsEngine = this->game->physicsWorld;
-
-    const BoundingBox& worldBox = physicsEngine.GetWorldBox();
-
-    Vector2D center = worldBox.Center();
-
-    // TODO: This doesn't work as expected.  Why?
-    const std::vector<PlanarObject*>& planarObjectArray = physicsEngine.GetPlanarObjectArray();
-    for(PlanarObject* planarObject : planarObjectArray)
-    {
-        MazeObject* mazeObject = dynamic_cast<MazeObject*>(planarObject);
-        if(mazeObject)
-        {
-            mazeObject->sourceTransform.Identity();
-            mazeObject->targetTransform.Identity();
-            mazeObject->targetTransform.translation = center - mazeObject->GetPosition();
-            mazeObject->targetTransform.scale = 0.0;
-        }
-    }
-}
-
-/*virtual*/ void GameRender::FlyMazeOutState::Leave()
-{
-}
-
-/*virtual*/ GameRender::State* GameRender::FlyMazeOutState::Tick(double deltaTime)
-{
-    this->transitionAlpha += this->animRate * deltaTime;
-    if(this->transitionAlpha > 1.0)
-    {
-        MazeQueen* mazeQueen = this->game->physicsWorld.FindTheQueen();
-        if((mazeQueen && !mazeQueen->alive) || this->game->debugWinEntireGame)
-            return new GameWonState(this->game);
-
-        return new GenerateMazeState(this->game);
-    }
-
-    return this;
-}
-
-/*virtual*/ double GameRender::FlyMazeOutState::GetTransitionAlpha() const
-{
-    return this->transitionAlpha;
-}
-
-//------------------------------ GameRender::PlayGameState ------------------------------
-
-GameRender::PlayGameState::PlayGameState(GameRender* game) : State(game)
-{
-}
-
-/*virtual*/ GameRender::PlayGameState::~PlayGameState()
-{
-}
-
-/*virtual*/ void GameRender::PlayGameState::Enter()
-{
-}
-
-/*virtual*/ void GameRender::PlayGameState::Leave()
-{
-}
-
-/*virtual*/ GameRender::State* GameRender::PlayGameState::Tick(double deltaTime)
-{
-    if(this->game->physicsWorld.IsMazeSolved() || this->game->debugWinEntireGame)
-    {
-        MazeQueen* mazeQueen = this->game->physicsWorld.FindTheQueen();
-        if(!mazeQueen)
-            this->game->progress.SetLevel(this->game->progress.GetLevel() + 1);
-        else
-            this->game->progress.Reset();
-
-        this->game->progress.SetTouches(0);
-        this->game->progress.Save(this->game->app);
-
-        return new FlyMazeOutState(this->game);
-    }
-
-    return this;
-}
-
-//------------------------------ GameRender::GameWonState ------------------------------
-
-GameRender::GameWonState::GameWonState(GameRender* game) : State(game)
-{
-}
-
-/*virtual*/ GameRender::GameWonState::~GameWonState()
-{
-}
-
-/*virtual*/ void GameRender::GameWonState::Enter()
-{
-    Engine& physicsEngine = this->game->physicsWorld;
-
-    const BoundingBox& worldBox = physicsEngine.GetWorldBox();
-
-    const std::vector<PlanarObject*>& planarObjectArray = physicsEngine.GetPlanarObjectArray();
-    for(PlanarObject* planarObject : planarObjectArray)
-    {
-        MazeObject *mazeObject = dynamic_cast<MazeObject *>(planarObject);
-        if (mazeObject)
-        {
-            mazeObject->sourceTransform.Identity();
-            mazeObject->targetTransform.Identity();
-            mazeObject->targetTransform.translation = 2.0 * worldBox.max;   // Move them all off screen.
-        }
-    }
-}
-
-/*virtual*/ void GameRender::GameWonState::Leave()
-{
-}
-
-/*virtual*/ double GameRender::GameWonState::GetTransitionAlpha() const
-{
-    return 1.0;
-}
-
-/*virtual*/ GameRender::State* GameRender::GameWonState::Tick(double deltaTime)
-{
-    return this;
-}
-
-/*virtual*/ void GameRender::GameWonState::Render(DrawHelper& drawHelper) const
-{
-    Engine& physicsEngine = this->game->physicsWorld;
-
-    const BoundingBox& worldBox = physicsEngine.GetWorldBox();
-
-    Transform textToWorld;
-    textToWorld.scale = 80.0;
-    textToWorld.translation = Vector2D(0.0, worldBox.max.y / 2.0);
-    this->game->textRenderer.RenderText("YOU WIN!!!", textToWorld, Color(1.0, 1.0, 1.0), drawHelper);
-
-    // TODO: Can the user choose here to add their name to a database of game winners?
-    //       Where could I host such a database?  Not for free, certainly, so maybe I won't bother.
-}
-
-//------------------------------ GameRender::PhysicsWorld ------------------------------
-
-GameRender::PhysicsWorld::PhysicsWorld()
-{
-}
-
-/*virtual*/ GameRender::PhysicsWorld::~PhysicsWorld()
-{
-}
-
-bool GameRender::PhysicsWorld::IsMazeSolved()
-{
-    return this->GetGoodMazeBlockCount() == this->GetGoodMazeBlockTouchedCount() && this->QueenDeadOrNonExistent();
-}
-
-int GameRender::PhysicsWorld::GetGoodMazeBlockCount()
-{
-    int count = 0;
-    for(auto planarObject : this->GetPlanarObjectArray())
-        if(dynamic_cast<GoodMazeBlock*>(planarObject))
-            count++;
-
-    return count;
-}
-
-int GameRender::PhysicsWorld::GetGoodMazeBlockTouchedCount()
-{
-    int count = 0;
-
-    for(auto planarObject : this->GetPlanarObjectArray())
-    {
-        auto goodMazeBlock = dynamic_cast<GoodMazeBlock *>(planarObject);
-        if (goodMazeBlock && goodMazeBlock->IsTouched())
-            count++;
-    }
-
-    return count;
-}
-
-bool GameRender::PhysicsWorld::QueenDeadOrNonExistent()
-{
-    MazeQueen* mazeQueen = this->FindTheQueen();
-    return !mazeQueen || !mazeQueen->alive;
-}
-
-MazeQueen* GameRender::PhysicsWorld::FindTheQueen()
-{
-    for(auto planarObject : this->GetPlanarObjectArray())
-    {
-        auto mazeQueen = dynamic_cast<MazeQueen *>(planarObject);
-        if (mazeQueen)
-            return mazeQueen;
-    }
-
-    return nullptr;
+    return double(this->surfaceWidth) / double(this->surfaceHeight);
 }

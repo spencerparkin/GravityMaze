@@ -36,6 +36,7 @@ add_library(gravitymaze SHARED
         ShaderProgram.cpp
         DrawHelper.cpp
         TextRenderer.cpp
+        TimeKeeper.cpp
         MazeObject.cpp
         MazeObjects/MazeBall.cpp
         MazeObjects/MazeWall.cpp
