@@ -18,8 +18,6 @@ MidiManager::MidiManager(android_app* app) : AudioDataLib::MidiPlayer(nullptr)
     this->currentMidiData = nullptr;
     this->waitTimeBetweenSongsSeconds = 0.0;
     this->waitTimeBegin = 0;
-    this->playbackThread = NULL;
-    this->playbackThreadRunning = false;
     this->state = State::INITIAL;
     this->stateMethodMap.insert(std::pair<State, StateMethod>(State::INITIAL, &MidiManager::InitialStateHandler));
     this->stateMethodMap.insert(std::pair<State, StateMethod>(State::SHUTDOWN, &MidiManager::ShutdownStateHandler));
@@ -84,12 +82,8 @@ MidiManager::State MidiManager::ShutdownStateHandler()
 {
     aout << "Shutdown down MIDI stuff..." << std::endl;
 
-    if(this->playbackThreadRunning)
-    {
-        this->playbackThreadRunning = false;
-        pthread_join(this->playbackThread, NULL);
-        this->playbackThread = NULL;
-    }
+    Error error;
+    this->EndPlayback(error);
 
     if(this->currentMidiData)
     {
@@ -258,56 +252,44 @@ MidiManager::State MidiManager::PickNewSongStateHandler()
         aout << "Track " << i << " is " << trackTimeSeconds << " seconds." << std::endl;
     }
 
-    if(this->playbackThread != NULL)
-        return State::SHUTDOWN;
-
-    this->playbackThreadRunning = true;
-    if(0 != pthread_create(&this->playbackThread, NULL, &MidiManager::PlaybackThreadEntryPoint, this))
+    this->SetTimeSeconds(0.0);
+    if(!this->BeginPlayback(tracksToPlaySet, error))
         return State::SHUTDOWN;
 
     aout << "Song should now play!!!" << std::endl;
     return State::PLAY_SONG;
 }
 
-/*static*/ void* MidiManager::PlaybackThreadEntryPoint(void* arg)
-{
-    auto midiManager = static_cast<MidiManager*>(arg);
-    midiManager->PlaybackThread();
-    return nullptr;
-}
-
-void MidiManager::PlaybackThread()
-{
-    std::set<uint32_t> tracksToPlaySet;
-    this->GetSimultaneouslyPlayableTracks(tracksToPlaySet);
-
-    Error error;
-    this->SetTimeSeconds(0.0);
-    if(this->BeginPlayback(tracksToPlaySet, error))
-    {
-        while (!this->NoMoreToPlay() && this->playbackThreadRunning)
-            this->ManagePlayback(error);
-
-        this->EndPlayback(error);
-    }
-
-    this->playbackThreadRunning = false;
-}
-
 MidiManager::State MidiManager::PlaySongStateHandler()
 {
-    if(!this->playbackThreadRunning)
+    Error error;
+
+    if(this->NoMoreToPlay())
     {
         aout << "Hit end of song!" << std::endl;
-
-        pthread_join(this->playbackThread, NULL);
-        this->playbackThread = NULL;
-
+        this->EndPlayback(error);
         this->SetMidiData(nullptr);
         delete this->currentMidiData;
         this->currentMidiData = nullptr;
-
         return State::PICK_WAIT_TIME_BETWEEN_SONGS;
+    }
+
+    // TODO: If the app window is destroyed or something like that, we need
+    //       to send a NOTE-OFF event for all channels.  We should probably
+    //       do this after the window is recreated too.
+    if(!this->ManagePlayback(error))
+    {
+        aout << "Error occurred during playback management!" << std::endl;
+        aout << "Error: " + error.GetMessage() << std::endl;
+        return State::SHUTDOWN;
+    }
+
+    int32_t timeSeconds = ::round(this->GetTimeSeconds());
+    static int32_t lastTimeSeconds = 0;
+    if(timeSeconds != lastTimeSeconds)
+    {
+        aout << "Playback at " << timeSeconds << " seconds." << std::endl;
+        lastTimeSeconds = timeSeconds;
     }
 
     return State::PLAY_SONG;
