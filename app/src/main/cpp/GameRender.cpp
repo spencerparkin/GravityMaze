@@ -307,7 +307,7 @@ bool GameRender::ShutdownWindow()
 
 bool GameRender::CanRender()
 {
-    return this->display != EGL_NO_DISPLAY;
+    return this->display != EGL_NO_DISPLAY && this->GetAspectRatio() != 0.0;
 }
 
 void GameRender::HandleSensorEvent(void* data)
